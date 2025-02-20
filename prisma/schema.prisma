@@ -1,0 +1,284 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+type BrandStats {
+  impression   String?
+  interactions String?
+  reach        String?
+}
+
+type SocialStats{
+  impression    String?
+  interactions  String?
+  reach         String? 
+}
+
+type TextsClients {
+  logoUrl String
+}
+
+type TextsHero {
+  description String
+  subtitle    String
+  title       String
+}
+
+type TextsServicePages {
+  branding       TextsServicePagesBranding
+  design         TextsServicePagesDesign
+  seo            TextsServicePagesSeo
+  webDevelopment TextsServicePagesWebDevelopment
+}
+
+type TextsServicePagesBranding {
+  carouselImages TextsServicePagesBrandingCarouselImages[]
+  description    String
+  whatWeDo       TextsServicePagesBrandingWhatWeDo
+}
+
+type TextsServicePagesBrandingCarouselImages {
+  imageUrl String
+}
+
+type TextsServicePagesBrandingWhatWeDo {
+  cards       TextsServicePagesBrandingWhatWeDoCards[]
+  description String
+}
+
+type TextsServicePagesBrandingWhatWeDoCards {
+  description String
+  title       String
+}
+
+type TextsServicePagesDesign {
+  carouselImages TextsServicePagesDesignCarouselImages[]
+  description    String
+  whatWeDo       TextsServicePagesDesignWhatWeDo
+}
+
+type TextsServicePagesDesignCarouselImages {
+  imageUrl String
+}
+
+type TextsServicePagesDesignWhatWeDo {
+  cards       TextsServicePagesDesignWhatWeDoCards[]
+  description String
+}
+
+type TextsServicePagesDesignWhatWeDoCards {
+  description String
+  title       String
+}
+
+type TextsServicePagesSeo {
+  carouselImages TextsServicePagesSeoCarouselImages[]
+  description    String
+  whatWeDo       TextsServicePagesSeoWhatWeDo
+}
+
+type TextsServicePagesSeoCarouselImages {
+  imageUrl String
+}
+
+type TextsServicePagesSeoWhatWeDo {
+  cards       TextsServicePagesSeoWhatWeDoCards[]
+  description String
+}
+
+type TextsServicePagesSeoWhatWeDoCards {
+  description String
+  title       String
+}
+
+type TextsServicePagesWebDevelopment {
+  carouselImages TextsServicePagesWebDevelopmentCarouselImages[]
+  description    String
+  whatWeDo       TextsServicePagesWebDevelopmentWhatWeDo
+}
+
+type TextsServicePagesWebDevelopmentCarouselImages {
+  imageUrl String
+}
+
+type TextsServicePagesWebDevelopmentWhatWeDo {
+  cards       TextsServicePagesWebDevelopmentWhatWeDoCards[]
+  description String
+}
+
+type TextsServicePagesWebDevelopmentWhatWeDoCards {
+  description String
+  title       String
+}
+
+type TextsServices {
+  description String
+  imageUrl    String
+  title       String
+  src         String
+}
+
+type TextsWhyChooseUs {
+  description String
+  imageUrl    String
+  title       String
+}
+
+type TextsContactUs {
+  banner           TextsContactUsBanner
+  contactInfoCards TextsContactUsContactInfoCards[]
+  faqs             TextsContactUsFaqs[]
+}
+
+type TextsContactUsBanner {
+  imageUrl String
+}
+
+type TextsContactUsContactInfoCards {
+  heading     String
+  description String
+}
+
+type TextsContactUsFaqs {
+  question String
+  answer   String
+}
+
+// New types for About Us page
+type TextsAboutUs {
+  title   String
+  content TextsAboutUsContent
+}
+
+type TextsAboutUsContent {
+  description String
+  images      TextsAboutUsContentImages[]
+}
+
+type TextsAboutUsContentImages {
+  imageUrl String
+}
+
+model Brand {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  Brand       String
+  Description String
+  Logo        String
+  Stats       BrandStats?
+  banner      String
+  archive             Boolean  @default(false)
+  highlighted         Boolean  @default(false)
+  tags        String[]
+}
+
+
+
+model Websites {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  Title               String
+  Description         String?
+  Status              String?
+  URL                 String?
+  Tags                String[]
+  Backup_Date         String?  @map("Backup Date")
+  Content_Update_Date String?  @map("Content Update Date")
+  archive             Boolean  @default(false)
+  highlighted         Boolean  @default(false)
+  Images              String?
+  Logo                String?
+}
+
+model clients {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  Brand_Name  String  @map("Brand Name")
+  Site_Type   String  @map("Site Type")
+  URL         String?
+  description String
+  tags        Json
+}
+
+model credentials {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+}
+
+model design {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  Banner      String
+  Brands      String
+  Description String
+  Logo        String
+  Type        String
+  URL                 String?
+  archive             Boolean  @default(false)
+  highlighted         Boolean  @default(false)
+  tags        String[]
+}
+
+model queries {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  E_mail     String @map("E-mail")
+  First_Name String @map("First Name")
+  Last_Name  String @map("Last Name")
+  Mobile     String
+  Query      String
+}
+
+model social {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  Brand String
+  Description String
+  Logo        String
+  Stats       SocialStats?
+  banner      String
+  archive             Boolean  @default(false)
+  highlighted         Boolean  @default(false)
+  tags        String[]
+  URL         String[]
+}
+
+model texts {
+  id           String             @id @default(auto()) @map("_id") @db.ObjectId
+  clients      TextsClients[]
+  hero         TextsHero?
+  servicePages TextsServicePages?
+  services     TextsServices[]
+  whyChooseUs  TextsWhyChooseUs[]
+  contactUs    TextsContactUs?    // New field for Contact Us page
+  aboutUs      TextsAboutUs[]     // New field for About Us page
+}
+model User {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  avatar   String
+  email    String @unique
+  password String
+}
+
+model Settings {
+  id               String  @id @default(auto()) @map("_id") @db.ObjectId
+  metaTitle        String
+  metaKeyword      String
+  metaDesc         String
+  phone1           String
+  phone2           String?
+  email1           String
+  email2           String?
+  address          String?
+  footerCopyright  String
+  contactText      String
+  maps             String?
+  facebook         String?
+  instagram        String?
+  skype            String?
+  linkedin         String?
+  twitter          String?
+  youtube          String?
+  whatsapp         String?
+  websiteLogoPath  String?
+  footerLogoPath   String?
+  faviconPath      String?
+}
