@@ -10,13 +10,7 @@ import {
 } from "@/components/ui/card"
 import { prisma } from "../../lib/prisma"
 
-// // This would typically come from a database or API
-// async function getWebsitesData() {
-//   // Simulating an async data fetch
-//   const allWebsites= await prisma.websites.findMany()
-  
-//   return (allWebsites)
-// }
+
 
 export default async function Dashboard() {
   const websitesData = await prisma.websites.findMany()
