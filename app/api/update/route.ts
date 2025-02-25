@@ -1,67 +1,80 @@
-import { NextRequest, NextResponse } from 'next/server';
-import {prisma} from '@/lib/prisma';
-import { writeFile } from 'fs/promises';
-import path from 'path';
+import { type NextRequest, NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
+import { PutObjectCommand } from "@aws-sdk/client-s3"
+import { s3Client } from "@/lib/s3"
+
+async function uploadToS3(file: File): Promise<string> {
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const filename = `${Date.now()}-${file.name.replace(/\s/g, "-")}`
+
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: process.env.AWS_BUCKET_NAME!,
+        Key: filename,
+        Body: buffer,
+        ContentType: file.type,
+      }),
+    )
+
+    return `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${filename}`
+  } catch (error) {
+    console.error("S3 upload error:", error)
+    throw new Error("Failed to upload file to S3")
+  }
+}
 
 export async function POST(req: NextRequest) {
-  console.log('Update route hit');
+  console.log("Update route hit")
   try {
-    const formData = await req.formData();
-    const type = formData.get('type') as string;
-    console.log('Received type:', type);
+    const formData = await req.formData()
+    const type = formData.get("type") as string
+    console.log("Received type:", type)
 
     if (!type) {
-      throw new Error('Type is required');
+      throw new Error("Type is required")
     }
 
-    const data: Record<string, any> = {};
+    const data: Record<string, any> = {}
     for (const [key, value] of formData.entries()) {
-      if (key.startsWith('Tags[') || key === 'Tags') {
-        if (!data.Tags) data.Tags = [];
+      if (key.startsWith("Tags[") || key === "Tags") {
+        if (!data.Tags) data.Tags = []
         if (Array.isArray(value)) {
-          data.Tags.push(...value);
+          data.Tags.push(...value)
         } else {
-          data.Tags.push(value);
+          data.Tags.push(value)
         }
       } else if (value instanceof File) {
-        // Handle file upload
-        const arrayBuffer = await value.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const filename = value.name;
-        const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-        const filePath = path.join(uploadDir, filename);
-
-        await writeFile(filePath, buffer);
-        data[key] = `/uploads/${filename}`;
-      } else if (key !== 'type') {
-        if (key === "URL") {
-          // Parse URL string into an array
-          data[key] = JSON.parse(value as string)
-        } else if (value === 'true') {
-          data[key] = true;
-        } else if (value === 'false') {
-          data[key] = false;
+        // Upload file to S3
+        const s3Url = await uploadToS3(value)
+        data[key] = s3Url
+      } else if (key !== "type") {
+        // Handle boolean values
+        if (value === "true") {
+          data[key] = true
+        } else if (value === "false") {
+          data[key] = false
         } else {
-          data[key] = value;
+          // Store the value as-is without parsing
+          data[key] = value
         }
       }
     }
 
-    console.log('Processed data:', data);
+    console.log("Processed data:", data)
 
-    let result;
+    let result
 
     switch (type) {
-      case 'websites':
-        if (data.id && data.id !== '') {
-          // Update existing record
+      case "websites":
+        if (data.id && data.id !== "") {
           result = await prisma.websites.update({
             where: { id: data.id },
             data: {
               Title: data.Title,
               Description: data.Description,
               Status: data.Status,
-              URL: data.URL,
+              URL: data.URL, // No JSON parsing needed
               Tags: data.Tags || [],
               Backup_Date: data.Backup_Date,
               Content_Update_Date: data.Content_Update_Date,
@@ -70,15 +83,14 @@ export async function POST(req: NextRequest) {
               Images: data.Images,
               Logo: data.Logo,
             },
-          });
+          })
         } else {
-          // Create new record
           result = await prisma.websites.create({
             data: {
               Title: data.Title,
               Description: data.Description,
               Status: data.Status,
-              URL: data.URL,
+              URL: data.URL, // No JSON parsing needed
               Tags: data.Tags || [],
               Backup_Date: data.Backup_Date,
               Content_Update_Date: data.Content_Update_Date,
@@ -87,12 +99,11 @@ export async function POST(req: NextRequest) {
               Images: data.Images,
               Logo: data.Logo,
             },
-          });
+          })
         }
-        break;
-      case 'brand':
-        if (data.id && data.id !== '') {
-          // Update existing record
+        break
+      case "brand":
+        if (data.id && data.id !== "") {
           result = await prisma.brand.update({
             where: { id: data.id },
             data: {
@@ -104,9 +115,8 @@ export async function POST(req: NextRequest) {
               highlighted: data.highlighted,
               tags: data.tags || [],
             },
-          });
+          })
         } else {
-          // Create new record
           result = await prisma.brand.create({
             data: {
               Brand: data.Brand,
@@ -117,12 +127,11 @@ export async function POST(req: NextRequest) {
               highlighted: data.highlighted,
               tags: data.tags || [],
             },
-          });
+          })
         }
-        break;
-        case "social":
+        break
+      case "social":
         if (data.id && data.id !== "") {
-          // Update existing record
           result = await prisma.social.update({
             where: { id: data.id },
             data: {
@@ -137,7 +146,6 @@ export async function POST(req: NextRequest) {
             },
           })
         } else {
-          // Create new record
           result = await prisma.social.create({
             data: {
               Brand: data.Brand,
@@ -152,16 +160,14 @@ export async function POST(req: NextRequest) {
           })
         }
         break
-      case 'design':
-        // Collect all tags from form data
+      case "design":
         const tags = Array.from(formData.entries())
-          .filter(([key]) => key.startsWith('tags['))
-          .map(([, value]) => value as string);
+          .filter(([key]) => key.startsWith("tags["))
+          .map(([, value]) => value as string)
 
-        console.log('Collected tags:', tags);
+        console.log("Collected tags:", tags)
 
-        if (data.id && data.id !== '') {
-          // Update existing record
+        if (data.id && data.id !== "") {
           result = await prisma.design.update({
             where: { id: data.id },
             data: {
@@ -170,13 +176,12 @@ export async function POST(req: NextRequest) {
               Description: data.Description,
               Logo: data.Logo,
               Type: data.Type,
-              highlighted: data.highlighted === 'true',
-              archive: data.archive === 'true',
+              highlighted: data.highlighted === "true",
+              archive: data.archive === "true",
               tags: tags,
             },
-          });
+          })
         } else {
-          // Create new record
           result = await prisma.design.create({
             data: {
               Banner: data.Banner,
@@ -184,92 +189,90 @@ export async function POST(req: NextRequest) {
               Description: data.Description,
               Logo: data.Logo,
               Type: data.Type,
-              highlighted: data.highlighted === 'true',
-              archive: data.archive === 'true',
+              highlighted: data.highlighted === "true",
+              archive: data.archive === "true",
               tags: tags,
             },
-          });
+          })
         }
-        break;
+        break
       default:
-        return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
+        return NextResponse.json({ error: "Invalid type" }, { status: 400 })
     }
 
-    console.log('Operation result:', result);
-    return NextResponse.json({ success: true, data: result });
-
+    console.log("Operation result:", result)
+    return NextResponse.json({ success: true, data: result })
   } catch (error) {
-    console.error('Error in POST /api/update:', error instanceof Error ? error.message : 'Unknown error');
+    console.error("Error in POST /api/update:", error instanceof Error ? error.message : "Unknown error")
     if (error instanceof Error && error.stack) {
-      console.error('Error stack:', error.stack);
+      console.error("Error stack:", error.stack)
     }
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'An unexpected error occurred',
-        stack: error instanceof Error && error.stack ? error.stack : undefined
+        error: error instanceof Error ? error.message : "An unexpected error occurred",
+        stack: error instanceof Error && error.stack ? error.stack : undefined,
       },
-      { status: 500 }
-    );
+      { status: 500 },
+    )
   }
 }
 
 export async function DELETE(req: NextRequest) {
-  console.log('Delete route hit');
+  console.log("Delete route hit")
   try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    const type = searchParams.get('type');
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get("id")
+    const type = searchParams.get("type")
 
     if (!id || !type) {
-      return NextResponse.json({ success: false, error: 'ID and type are required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: "ID and type are required" }, { status: 400 })
     }
 
-    let result;
+    let result
 
     switch (type) {
-      case 'websites':
+      case "websites":
         result = await prisma.websites.delete({
           where: { id },
-        });
-        break;
-      case 'brand':
+        })
+        break
+      case "brand":
         result = await prisma.brand.delete({
           where: { id },
-        });
-        break;
-      case 'social':
+        })
+        break
+      case "social":
         result = await prisma.social.delete({
           where: { id },
-        });
-        break;
-      case 'design':
+        })
+        break
+      case "design":
         result = await prisma.design.delete({
           where: { id },
-        });
-        break;
+        })
+        break
       default:
-        return NextResponse.json({ success: false, error: 'Invalid type' }, { status: 400 });
+        return NextResponse.json({ success: false, error: "Invalid type" }, { status: 400 })
     }
 
-    console.log('Delete operation result:', result);
-    return NextResponse.json({ success: true, data: result });
-
+    console.log("Delete operation result:", result)
+    return NextResponse.json({ success: true, data: result })
   } catch (error) {
-    console.error('Error in DELETE /api/update:', error instanceof Error ? error.message : 'Unknown error');
+    console.error("Error in DELETE /api/update:", error instanceof Error ? error.message : "Unknown error")
     if (error instanceof Error && error.stack) {
-      console.error('Error stack:', error.stack);
+      console.error("Error stack:", error.stack)
     }
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'An unexpected error occurred',
-        stack: error instanceof Error && error.stack ? error.stack : undefined
+        error: error instanceof Error ? error.message : "An unexpected error occurred",
+        stack: error instanceof Error && error.stack ? error.stack : undefined,
       },
-      { status: 500 }
-    );
+      { status: 500 },
+    )
   }
 }
 

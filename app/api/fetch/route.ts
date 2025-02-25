@@ -76,8 +76,8 @@ export async function GET(request: Request) {
             ...item,
             Tags: Array.isArray(item.Tags) ? item.Tags : [],
             Status: item.Status || 'Unknown',
-            Images: item.Images ? (item.Images.startsWith('/uploads/') ? item.Images : `/uploads/${item.Images}`) : null,
-            Logo: item.Logo ? (item.Logo.startsWith('/uploads/') ? item.Logo : `/uploads/${item.Logo}`) : null,
+            Images: item.Images ? item.Images : null,
+            Logo: item.Logo ? item.Logo : null,
           })),
           total,
         };

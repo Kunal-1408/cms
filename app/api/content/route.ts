@@ -1,7 +1,29 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { writeFile, mkdir } from "fs/promises"
-import { join } from "path"
+import { PutObjectCommand } from "@aws-sdk/client-s3"
+import { s3Client } from "@/lib/s3"
+
+// Helper function to upload a file to S3
+async function uploadToS3(file: File): Promise<string> {
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const filename = `content/${Date.now()}-${file.name.replace(/\s/g, "-")}`
+
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: process.env.AWS_BUCKET_NAME!,
+        Key: filename,
+        Body: buffer,
+        ContentType: file.type,
+      }),
+    )
+
+    return `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${filename}`
+  } catch (error) {
+    console.error("S3 upload error:", error)
+    throw new Error("Failed to upload file to S3")
+  }
+}
 
 export async function GET() {
   try {
@@ -29,25 +51,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON data" }, { status: 400 })
     }
 
-    const uploadDir = join(process.cwd(), "public", "uploads", "content")
-    await mkdir(uploadDir, { recursive: true })
-
-    // Handle file uploads
+    // Handle file uploads to S3 instead of local filesystem
     const files = formData.getAll("images") as File[]
     const uploadedFiles = await Promise.all(
       files.map(async (file) => {
-        const arrayBuffer = await file.arrayBuffer()
-        const buffer = Buffer.from(arrayBuffer)
-        const filename = file.name
-        const path = join(uploadDir, filename)
-        await writeFile(path, buffer)
-        return `/uploads/content/${filename}`
+        return await uploadToS3(file)
       }),
     )
 
-    console.log("Uploaded files:", uploadedFiles)
+    console.log("Uploaded files to S3:", uploadedFiles)
 
-    // Update data with file paths
+    // Update data with S3 file URLs
     let fileIndex = 0
 
     // Update clients
