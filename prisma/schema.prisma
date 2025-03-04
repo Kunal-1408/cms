@@ -282,3 +282,51 @@ model Settings {
   footerLogoPath   String?
   faviconPath      String?
 }
+
+type LogoSection {
+  logo        String
+  description String
+}
+
+type BannerSection {
+  description String
+  banners     String[]
+}
+
+type StandeeSection {
+  description String
+  standees    String[]
+}
+
+type CardSection {
+  description String
+  card        String[] // Will contain exactly 2 strings [front, back]
+}
+
+type GoodiesSection {
+  description String
+  goodies     String[]
+}
+
+model Branding {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  // Basic Information
+  title         String
+  description   String
+  clientName    String?
+  
+  // Sections using embedded types
+  logoSection   LogoSection
+  bannerSection BannerSection
+  standeeSection StandeeSection?
+  cardSection   CardSection?
+  goodiesSection GoodiesSection?
+  
+  // Additional metadata
+  tags          String[]
+  archive       Boolean        @default(false)
+  highlighted   Boolean        @default(false)
+}

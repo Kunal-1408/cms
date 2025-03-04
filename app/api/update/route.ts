@@ -160,38 +160,119 @@ export async function POST(req: NextRequest) {
           })
         }
         break
-      case "design":
-        const tags = Array.from(formData.entries())
-          .filter(([key]) => key.startsWith("tags["))
-          .map(([, value]) => value as string)
+      case "branding":
+        // Parse JSON strings for nested sections or create new objects if they're simple strings
+        let logoSection
+        try {
+          logoSection = data.logoSection ? JSON.parse(data.logoSection) : { logo: "", description: "" }
+          // If logoSection is a string after parsing (not an object), create a proper object
+          if (typeof logoSection !== "object" || logoSection === null) {
+            logoSection = { logo: "", description: data.logoSection || "" }
+          }
+        } catch (e) {
+          // If parsing fails, create a default object with the string as description
+          logoSection = { logo: "", description: data.logoSection || "" }
+        }
 
-        console.log("Collected tags:", tags)
+        let bannerSection
+        try {
+          bannerSection = data.bannerSection ? JSON.parse(data.bannerSection) : { description: "", banners: [] }
+          // If bannerSection is a string after parsing (not an object), create a proper object
+          if (typeof bannerSection !== "object" || bannerSection === null) {
+            bannerSection = { description: data.bannerSection || "", banners: [] }
+          }
+        } catch (e) {
+          // If parsing fails, create a default object with the string as description
+          bannerSection = { description: data.bannerSection || "", banners: [] }
+        }
 
+        // Optional sections - only parse if they exist
+        let standeeSection
+        try {
+          standeeSection = data.standeeSection ? JSON.parse(data.standeeSection) : undefined
+        } catch (e) {
+          // If parsing fails but there's a string, create a section with that as description
+          if (data.standeeSection) {
+            standeeSection = { description: data.standeeSection, standees: [] }
+          }
+        }
+
+        let cardSection
+        try {
+          cardSection = data.cardSection ? JSON.parse(data.cardSection) : undefined
+        } catch (e) {
+          // If parsing fails but there's a string, create a section with that as description
+          if (data.cardSection) {
+            cardSection = { description: data.cardSection, card: ["", ""] }
+          }
+        }
+
+        let goodiesSection
+        try {
+          goodiesSection = data.goodiesSection ? JSON.parse(data.goodiesSection) : undefined
+        } catch (e) {
+          // If parsing fails but there's a string, create a section with that as description
+          if (data.goodiesSection) {
+            goodiesSection = { description: data.goodiesSection, goodies: [] }
+          }
+        }
+
+        // Handle file uploads for logo
+        if (data.logoFile) {
+          logoSection.logo = data.logoFile // S3 URL already set in the file processing loop
+        }
+
+        // Handle file uploads for banners
+        for (const key in data) {
+          if (key.startsWith("bannerFile_")) {
+            bannerSection.banners.push(data[key])
+          } else if (key.startsWith("standeeFile_") && standeeSection) {
+            if (!standeeSection.standees) standeeSection.standees = []
+            standeeSection.standees.push(data[key])
+          } else if (key.startsWith("cardFile_") && cardSection) {
+            if (!cardSection.card) cardSection.card = []
+            cardSection.card.push(data[key])
+          } else if (key.startsWith("goodiesFile_") && goodiesSection) {
+            if (!goodiesSection.goodies) goodiesSection.goodies = []
+            goodiesSection.goodies.push(data[key])
+          }
+        }
+
+        // Create or update the branding record
         if (data.id && data.id !== "") {
-          result = await prisma.design.update({
+          result = await prisma.branding.update({
             where: { id: data.id },
             data: {
-              Banner: data.Banner,
-              Brands: data.Brands,
-              Description: data.Description,
-              Logo: data.Logo,
-              Type: data.Type,
-              highlighted: data.highlighted === "true",
+              title: data.title,
+              description: data.description,
+              clientName: data.clientName || null,
+              logoSection: logoSection,
+              bannerSection: bannerSection,
+              standeeSection: standeeSection,
+              cardSection: cardSection,
+              goodiesSection: goodiesSection,
+              tags: Array.isArray(data.tags) ? data.tags : JSON.parse(data.tags || "[]"),
               archive: data.archive === "true",
-              tags: tags,
+              highlighted: data.highlighted === "true",
+              updatedAt: new Date().toISOString(),
             },
           })
         } else {
-          result = await prisma.design.create({
+          result = await prisma.branding.create({
             data: {
-              Banner: data.Banner,
-              Brands: data.Brands,
-              Description: data.Description,
-              Logo: data.Logo,
-              Type: data.Type,
-              highlighted: data.highlighted === "true",
+              title: data.title,
+              description: data.description,
+              clientName: data.clientName || null,
+              logoSection: logoSection,
+              bannerSection: bannerSection,
+              standeeSection: standeeSection,
+              cardSection: cardSection,
+              goodiesSection: goodiesSection,
+              tags: Array.isArray(data.tags) ? data.tags : JSON.parse(data.tags || "[]"),
               archive: data.archive === "true",
-              tags: tags,
+              highlighted: data.highlighted === "true",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
             },
           })
         }
@@ -250,6 +331,11 @@ export async function DELETE(req: NextRequest) {
         break
       case "design":
         result = await prisma.design.delete({
+          where: { id },
+        })
+        break
+      case "branding":
+        result = await prisma.branding.delete({
           where: { id },
         })
         break
