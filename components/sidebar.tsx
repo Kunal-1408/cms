@@ -123,6 +123,14 @@ export default function SidebarDemo() {
                   </Link>
                 </li>
                 <li className='text-sm font-medium text-neutral-500 mx-auto'>
+                  <Link href="/tag_manager">
+                    <button className='flex flex-row p-4 rounded w-full hover:bg-slate-200'>
+                      <Home className='h-5 w-5'/>
+                      <span className='px-2'>Tag Manager</span>
+                    </button>  
+                  </Link>
+                </li>
+                <li className='text-sm font-medium text-neutral-500 mx-auto'>
                   <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="item-1">
                       <AccordionTrigger className="hover:bg-slate-200 rounded p-4">

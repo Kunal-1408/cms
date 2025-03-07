@@ -283,6 +283,7 @@ model Settings {
   faviconPath      String?
 }
 
+// Shared types for both Branding and Social models
 type LogoSection {
   logo        String
   description String
@@ -308,6 +309,48 @@ type GoodiesSection {
   goodies     String[]
 }
 
+// Social media specific types
+type SocialMediaSection {
+  description String
+  platforms   SocialPlatform[]
+}
+
+type SocialPlatform {
+  name        String // e.g., "Instagram", "Twitter", "Facebook", "LinkedIn"
+  url         String
+  handle      String
+  followers   Int?
+  engagement  Float?
+  description String?
+}
+
+type AnalyticsSection {
+  description String
+  metrics     Metric[]
+}
+
+type Metric {
+  name        String // e.g., "Impressions", "Reach", "Engagement Rate"
+  value       String
+  change      Float? // Percentage change from previous period
+  period      String? // e.g., "Last 30 days", "Year to date"
+}
+
+type CampaignSection {
+  description String
+  campaigns   Campaign[]
+}
+
+type Campaign {
+  name        String
+  description String
+  startDate   DateTime?
+  endDate     DateTime?
+  status      String // e.g., "Active", "Completed", "Planned"
+  results     String?
+  images      String[]
+}
+
 model Branding {
   id            String         @id @default(auto()) @map("_id") @db.ObjectId
   createdAt     DateTime       @default(now())
@@ -329,4 +372,53 @@ model Branding {
   tags          String[]
   archive       Boolean        @default(false)
   highlighted   Boolean        @default(false)
+}
+
+model Social {
+  id                String              @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  // Basic Information
+  title             String
+  description       String
+  clientName        String?
+  
+  // Sections using embedded types
+  logoSection       LogoSection
+  bannerSection     BannerSection
+  socialMediaSection SocialMediaSection
+  analyticsSection  AnalyticsSection?
+  campaignSection   CampaignSection?
+  
+  // Additional metadata
+  tags              String[]
+  archive           Boolean             @default(false)
+  highlighted       Boolean             @default(false)
+  
+  // Legacy fields for backward compatibility
+  Brand             String?
+  Description       String?
+  Logo              String?
+  URL               String[]
+  banner            String?
+  Tags              String[]
+}
+model TagType {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  name  String
+  color String
+  tags  Tag[]
+
+  @@map("tag_types")
+}
+
+model Tag {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  color     String?
+  tagType   TagType @relation(fields: [tagTypeId], references: [id], onDelete: Cascade)
+  tagTypeId String  @db.ObjectId
+
+  @@map("tags")
 }

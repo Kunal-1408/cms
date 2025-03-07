@@ -131,36 +131,6 @@ export async function POST(req: NextRequest) {
         }
         break
       case "social":
-        if (data.id && data.id !== "") {
-          result = await prisma.social.update({
-            where: { id: data.id },
-            data: {
-              Brand: data.Brand,
-              Description: data.Description,
-              Logo: data.Logo,
-              URL: data.URL,
-              banner: data.banner,
-              highlighted: data.highlighted === "true",
-              tags: Array.isArray(data.tags) ? data.tags : JSON.parse(data.tags || "[]"),
-              archive: data.archive === "true",
-            },
-          })
-        } else {
-          result = await prisma.social.create({
-            data: {
-              Brand: data.Brand,
-              Description: data.Description,
-              Logo: data.Logo,
-              URL: data.URL,
-              banner: data.banner,
-              highlighted: data.highlighted === "true",
-              tags: Array.isArray(data.tags) ? data.tags : JSON.parse(data.tags || "[]"),
-              archive: false,
-            },
-          })
-        }
-        break
-      case "branding":
         // Parse JSON strings for nested sections or create new objects if they're simple strings
         let logoSection
         try {
@@ -184,6 +154,150 @@ export async function POST(req: NextRequest) {
         } catch (e) {
           // If parsing fails, create a default object with the string as description
           bannerSection = { description: data.bannerSection || "", banners: [] }
+        }
+
+        let socialMediaSection
+        try {
+          socialMediaSection = data.socialMediaSection
+            ? JSON.parse(data.socialMediaSection)
+            : { description: "", platforms: [] }
+          if (typeof socialMediaSection !== "object" || socialMediaSection === null) {
+            socialMediaSection = { description: data.socialMediaSection || "", platforms: [] }
+          }
+        } catch (e) {
+          socialMediaSection = { description: data.socialMediaSection || "", platforms: [] }
+        }
+
+        // Optional sections - only parse if they exist
+        let analyticsSection
+        try {
+          analyticsSection = data.analyticsSection ? JSON.parse(data.analyticsSection) : undefined
+        } catch (e) {
+          // If parsing fails but there's a string, create a section with that as description
+          if (data.analyticsSection) {
+            analyticsSection = { description: data.analyticsSection, metrics: [] }
+          }
+        }
+
+        let campaignSection
+        try {
+          campaignSection = data.campaignSection ? JSON.parse(data.campaignSection) : undefined
+        } catch (e) {
+          // If parsing fails but there's a string, create a section with that as description
+          if (data.campaignSection) {
+            campaignSection = { description: data.campaignSection, campaigns: [] }
+          }
+        }
+
+        // Handle file uploads for logo
+        if (data.logoFile) {
+          logoSection.logo = data.logoFile // S3 URL already set in the file processing loop
+        }
+
+        // Handle file uploads for banners
+        for (const key in data) {
+          if (key.startsWith("bannerFile_")) {
+            bannerSection.banners.push(data[key])
+          } else if (key.match(/^campaignFile_\d+_\d+$/)) {
+            // Extract campaign index and file index from key (format: campaignFile_0_0)
+            const [_, campaignIndex, fileIndex] = key.split("_").map(Number)
+
+            if (!campaignSection) {
+              campaignSection = { description: "", campaigns: [] }
+            }
+
+            // Ensure the campaign exists at the specified index
+            while (campaignSection.campaigns.length <= campaignIndex) {
+              campaignSection.campaigns.push({ name: "", description: "", status: "Planned", images: [] })
+            }
+
+            // Ensure the images array exists
+            if (!campaignSection.campaigns[campaignIndex].images) {
+              campaignSection.campaigns[campaignIndex].images = []
+            }
+
+            // Add the image URL to the campaign
+            campaignSection.campaigns[campaignIndex].images.push(data[key])
+          }
+        }
+
+        // Create or update the social record
+        if (data.id && data.id !== "") {
+          result = await prisma.social.update({
+            where: { id: data.id },
+            data: {
+              title: data.title,
+              description: data.description,
+              clientName: data.clientName || null,
+              logoSection: logoSection,
+              bannerSection: bannerSection,
+              socialMediaSection: socialMediaSection,
+              analyticsSection: analyticsSection,
+              campaignSection: campaignSection,
+              tags: Array.isArray(data.tags) ? data.tags : JSON.parse(data.tags || "[]"),
+              archive: data.archive === "true",
+              highlighted: data.highlighted === "true",
+              updatedAt: new Date(),
+
+              // Legacy fields for backward compatibility
+              Brand: data.title || data.Brand,
+              Description: data.description || data.Description,
+              Logo: logoSection.logo,
+              URL: socialMediaSection.platforms?.map((p) => p.url) || [],
+              banner: bannerSection.banners?.[0] || null,
+            },
+          })
+        } else {
+          result = await prisma.social.create({
+            data: {
+              title: data.title,
+              description: data.description,
+              clientName: data.clientName || null,
+              logoSection: logoSection,
+              bannerSection: bannerSection,
+              socialMediaSection: socialMediaSection,
+              analyticsSection: analyticsSection,
+              campaignSection: campaignSection,
+              tags: Array.isArray(data.tags) ? data.tags : JSON.parse(data.tags || "[]"),
+              archive: data.archive === "true",
+              highlighted: data.highlighted === "true",
+              createdAt: new Date(),
+              updatedAt: new Date(),
+
+              // Legacy fields for backward compatibility
+              Brand: data.title,
+              Description: data.description,
+              Logo: logoSection.logo,
+              URL: socialMediaSection.platforms?.map((p) => p.url) || [],
+              banner: bannerSection.banners?.[0] || null,
+            },
+          })
+        }
+        break
+      case "branding":
+        // Parse JSON strings for nested sections or create new objects if they're simple strings
+        let brandingLogoSection
+        try {
+          brandingLogoSection = data.logoSection ? JSON.parse(data.logoSection) : { logo: "", description: "" }
+          // If logoSection is a string after parsing (not an object), create a proper object
+          if (typeof brandingLogoSection !== "object" || brandingLogoSection === null) {
+            brandingLogoSection = { logo: "", description: data.logoSection || "" }
+          }
+        } catch (e) {
+          // If parsing fails, create a default object with the string as description
+          brandingLogoSection = { logo: "", description: data.logoSection || "" }
+        }
+
+        let brandingBannerSection
+        try {
+          brandingBannerSection = data.bannerSection ? JSON.parse(data.bannerSection) : { description: "", banners: [] }
+          // If bannerSection is a string after parsing (not an object), create a proper object
+          if (typeof brandingBannerSection !== "object" || brandingBannerSection === null) {
+            brandingBannerSection = { description: data.bannerSection || "", banners: [] }
+          }
+        } catch (e) {
+          // If parsing fails, create a default object with the string as description
+          brandingBannerSection = { description: data.bannerSection || "", banners: [] }
         }
 
         // Optional sections - only parse if they exist
@@ -219,13 +333,13 @@ export async function POST(req: NextRequest) {
 
         // Handle file uploads for logo
         if (data.logoFile) {
-          logoSection.logo = data.logoFile // S3 URL already set in the file processing loop
+          brandingLogoSection.logo = data.logoFile // S3 URL already set in the file processing loop
         }
 
         // Handle file uploads for banners
         for (const key in data) {
           if (key.startsWith("bannerFile_")) {
-            bannerSection.banners.push(data[key])
+            brandingBannerSection.banners.push(data[key])
           } else if (key.startsWith("standeeFile_") && standeeSection) {
             if (!standeeSection.standees) standeeSection.standees = []
             standeeSection.standees.push(data[key])
@@ -246,8 +360,8 @@ export async function POST(req: NextRequest) {
               title: data.title,
               description: data.description,
               clientName: data.clientName || null,
-              logoSection: logoSection,
-              bannerSection: bannerSection,
+              logoSection: brandingLogoSection,
+              bannerSection: brandingBannerSection,
               standeeSection: standeeSection,
               cardSection: cardSection,
               goodiesSection: goodiesSection,
@@ -263,8 +377,8 @@ export async function POST(req: NextRequest) {
               title: data.title,
               description: data.description,
               clientName: data.clientName || null,
-              logoSection: logoSection,
-              bannerSection: bannerSection,
+              logoSection: brandingLogoSection,
+              bannerSection: brandingBannerSection,
               standeeSection: standeeSection,
               cardSection: cardSection,
               goodiesSection: goodiesSection,
