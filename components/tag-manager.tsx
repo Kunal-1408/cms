@@ -119,19 +119,16 @@ export default function TagManager({ tagType, onTagTypeUpdated }: TagManagerProp
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-3">
-          <h3 className="text-lg font-medium">Tags for {tagType.name}</h3>
-          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: tagType.color }} />
-        </div>
+        <h4 className="text-md font-medium">Tags in {tagType.name}</h4>
         {!isCreating && (
-          <Button onClick={() => setIsCreating(true)} size="sm">
+          <Button onClick={() => setIsCreating(true)} size="sm" variant="outline">
             <Plus className="h-4 w-4 mr-2" /> Add Tag
           </Button>
         )}
       </div>
 
       {isCreating && (
-        <Card>
+        <Card className="bg-background">
           <CardContent className="pt-6">
             <form onSubmit={handleCreateSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -151,10 +148,16 @@ export default function TagManager({ tagType, onTagTypeUpdated }: TagManagerProp
               </div>
 
               <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsCreating(false)} disabled={isSubmitting}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsCreating(false)}
+                  disabled={isSubmitting}
+                  size="sm"
+                >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting} size="sm">
                   {isSubmitting ? "Creating..." : "Create Tag"}
                 </Button>
               </div>
@@ -163,45 +166,63 @@ export default function TagManager({ tagType, onTagTypeUpdated }: TagManagerProp
         </Card>
       )}
 
-      <div className="grid gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
         {tags.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
+          <div className="text-center py-4 text-muted-foreground col-span-full">
             No tags found in this tag type. Create your first tag!
           </div>
         ) : (
           tags.map((tag) => (
-            <div key={tag.id} className="p-4 border rounded-md flex justify-between items-center">
+            <div key={tag.id} className="p-3 border rounded-md flex justify-between items-center">
               {editingId === tag.id ? (
-                <div className="flex-1 space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor={`edit-name-${tag.id}`}>Name</Label>
+                <div className="flex-1 space-y-3">
+                  <div className="space-y-1">
+                    <Label htmlFor={`edit-name-${tag.id}`} className="text-xs">
+                      Name
+                    </Label>
                     <Input
                       id={`edit-name-${tag.id}`}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Enter tag name"
                       required
+                      className="h-8"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor={`edit-color-${tag.id}`}>Color</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor={`edit-color-${tag.id}`} className="text-xs">
+                      Color
+                    </Label>
                     <ColorPicker color={color} onChange={setColor} />
                   </div>
 
-                  <div className="flex justify-end space-x-2">
-                    <Button type="button" size="sm" variant="outline" onClick={cancelEditing} disabled={isSubmitting}>
-                      <X className="h-4 w-4 mr-1" /> Cancel
+                  <div className="flex justify-end space-x-2 mt-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={cancelEditing}
+                      disabled={isSubmitting}
+                      className="h-7 px-2"
+                    >
+                      <X className="h-3 w-3 mr-1" /> Cancel
                     </Button>
-                    <Button type="button" size="sm" onClick={() => handleUpdateSubmit(tag.id)} disabled={isSubmitting}>
-                      <Check className="h-4 w-4 mr-1" /> Save
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleUpdateSubmit(tag.id)}
+                      disabled={isSubmitting}
+                      className="h-7 px-2"
+                    >
+                      <Check className="h-3 w-3 mr-1" /> Save
                     </Button>
                   </div>
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-6 h-6 rounded-full" style={{ backgroundColor: tag.color || tagType.color }} />
+                  <div className="flex items-center space-x-2">
+                    <div className="w-5 h-5 rounded-full" style={{ backgroundColor: tag.color || tagType.color }} />
                     <span
                       className="px-2 py-1 rounded-md text-sm font-medium"
                       style={{
@@ -212,12 +233,12 @@ export default function TagManager({ tagType, onTagTypeUpdated }: TagManagerProp
                       {tag.name}
                     </span>
                   </div>
-                  <div className="flex space-x-2">
-                    <Button size="icon" variant="ghost" onClick={() => startEditing(tag)}>
-                      <Edit className="h-4 w-4" />
+                  <div className="flex space-x-1">
+                    <Button size="icon" variant="ghost" onClick={() => startEditing(tag)} className="h-7 w-7">
+                      <Edit className="h-3.5 w-3.5" />
                     </Button>
-                    <Button size="icon" variant="ghost" onClick={() => handleDelete(tag.id)}>
-                      <Trash className="h-4 w-4" />
+                    <Button size="icon" variant="ghost" onClick={() => handleDelete(tag.id)} className="h-7 w-7">
+                      <Trash className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </>

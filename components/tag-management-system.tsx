@@ -1,10 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import TagTypeManager from "@/components/tag-type-manager"
-import TagManager from "@/components/tag-manager"
 import type { TagType } from "@/types/tag-types"
 
 export default function TagManagementSystem() {
@@ -65,31 +63,14 @@ export default function TagManagementSystem() {
         <CardDescription>Create and manage tag types and tags with custom colors</CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="types" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="types">Tag Types</TabsTrigger>
-            <TabsTrigger value="tags">Tags</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="types" className="space-y-4">
-            <TagTypeManager
-              tagTypes={tagTypes}
-              onTagTypeCreated={handleTagTypeCreated}
-              onTagTypeUpdated={handleTagTypeUpdated}
-              onTagTypeDeleted={handleTagTypeDeleted}
-              onTagTypeSelect={handleTagTypeSelect}
-              selectedTagType={selectedTagType}
-            />
-          </TabsContent>
-
-          <TabsContent value="tags" className="space-y-4">
-            {selectedTagType ? (
-              <TagManager tagType={selectedTagType} onTagTypeUpdated={handleTagTypeUpdated} />
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">Please select or create a tag type first</div>
-            )}
-          </TabsContent>
-        </Tabs>
+        <TagTypeManager
+          tagTypes={tagTypes}
+          onTagTypeCreated={handleTagTypeCreated}
+          onTagTypeUpdated={handleTagTypeUpdated}
+          onTagTypeDeleted={handleTagTypeDeleted}
+          onTagTypeSelect={handleTagTypeSelect}
+          selectedTagType={selectedTagType}
+        />
       </CardContent>
     </Card>
   )
