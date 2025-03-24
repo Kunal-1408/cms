@@ -81,7 +81,7 @@ export default function AccountForm() {
     }
 
     try {
-      const response = await fetch("/api/update-account", {
+      const response = await fetch("/CMS/api/update-account", {
         method: "POST",
         body: formData,
       })

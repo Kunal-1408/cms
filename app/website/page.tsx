@@ -61,7 +61,7 @@ export default function AdminDashboard() {
     })
 
     try {
-      const response = await fetch("/api/seo", {
+      const response = await fetch("/CMS/api/seo", {
         method: "POST",
         body: data,
       })

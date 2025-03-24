@@ -36,7 +36,7 @@ export default function AboutUs() {
   const fetchContent = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch("/api/content")
+      const response = await fetch("/CMS/api/content")
       if (response.ok) {
         const data = await response.json()
         setContent({ aboutUs: data.aboutUs || [] })
@@ -161,7 +161,7 @@ export default function AboutUs() {
         }
       }
 
-      const response = await fetch("/api/content", {
+      const response = await fetch("/CMS/api/content", {
         method: "POST",
         body: formData,
       })

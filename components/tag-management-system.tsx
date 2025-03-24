@@ -18,7 +18,7 @@ export default function TagManagementSystem() {
   const fetchTagTypes = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch("/api/tag-types")
+      const response = await fetch("/CMS/api/tag-types")
       const data = await response.json()
       setTagTypes(data)
 

@@ -82,7 +82,7 @@ export default function ServicePages() {
   const fetchContent = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch("/api/content")
+      const response = await fetch("/CMS/api/content")
       if (response.ok) {
         const data = await response.json()
         setContent({
@@ -229,7 +229,7 @@ export default function ServicePages() {
         await appendImages(service)
       }
 
-      const response = await fetch("/api/content", {
+      const response = await fetch("/CMS/api/content", {
         method: "POST",
         body: formData,
       })

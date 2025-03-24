@@ -42,7 +42,7 @@ export default function TagTypeManager({
 
     setIsSubmitting(true)
     try {
-      const response = await fetch("/api/tag-types", {
+      const response = await fetch("/CMS/api/tag-types", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -69,7 +69,7 @@ export default function TagTypeManager({
 
     setIsSubmitting(true)
     try {
-      const response = await fetch(`/api/tag-types/${tagTypeId}`, {
+      const response = await fetch(`/CMS/api/tag-types/${tagTypeId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -95,7 +95,7 @@ export default function TagTypeManager({
     }
 
     try {
-      const response = await fetch(`/api/tag-types/${tagTypeId}`, {
+      const response = await fetch(`/CMS/api/tag-types/${tagTypeId}`, {
         method: "DELETE",
       })
 

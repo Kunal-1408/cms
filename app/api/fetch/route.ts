@@ -84,7 +84,7 @@ export async function GET(request: Request) {
 
       console.log(`Fetching data for model: ${modelName}`)
 
-      // Create appropriate where clause based on model type
+      
       let whereClause: any = {}
 
       if (search) {
@@ -112,7 +112,7 @@ export async function GET(request: Request) {
             ],
           }
         } else {
-          // Default search for other models
+          
           whereClause = {
             OR: [
               { Title: { contains: search, mode: "insensitive" } },
@@ -122,15 +122,15 @@ export async function GET(request: Request) {
               { Brand: { contains: search, mode: "insensitive" } },
             ].filter((clause) => {
               const field = Object.keys(clause)[0]
-              // Check if the field exists in the model
+              
               try {
                 return (
                   field in (model.fields || {}) ||
-                  // For nested fields like OR, we'll just include them
+                  
                   field === "OR"
                 )
               } catch (e) {
-                return true // Include by default if we can't check
+                return true 
               }
             }),
           }

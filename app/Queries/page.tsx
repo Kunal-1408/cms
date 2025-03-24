@@ -29,7 +29,7 @@ export default function Queries() {
 
   const fetchQueries = async () => {
     try {
-      const response = await fetch(`/api/fetchquery?page=${currentPage}&limit=${queriesPerPage}&search=${searchQuery}`)
+      const response = await fetch(`/CMS/api/fetchquery?page=${currentPage}&limit=${queriesPerPage}&search=${searchQuery}`)
       if (!response.ok) throw new Error('Failed to fetch queries')
       const data = await response.json()
       setQueries(data.queries)
@@ -45,7 +45,7 @@ export default function Queries() {
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`/api/fetchquery?id=${id}`, { method: 'DELETE' })
+      const response = await fetch(`/CMS/api/fetchquery?id=${id}`, { method: 'DELETE' })
       if (!response.ok) throw new Error('Failed to delete query')
       await fetchQueries()
       if (selectedQuery?.id === id) {

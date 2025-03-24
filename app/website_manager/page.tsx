@@ -129,7 +129,7 @@ export default function Dashboard() {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await fetch(`/api/fetch?page=${currentPage}&limit=${websitesPerPage}&types=websites&search=${encodeURIComponent(searchQuery)}`, {
+      const response = await fetch(`/CMS/api/fetch?page=${currentPage}&limit=${websitesPerPage}&types=websites&search=${encodeURIComponent(searchQuery)}`, {
         method: 'GET',
       });
   
@@ -288,7 +288,7 @@ export default function Dashboard() {
           formData.append('Logo', logoFile);
         }
 
-        const response = await fetch('/api/update', {
+        const response = await fetch('/CMS/api/update', {
           method: 'POST',
           body: formData,
         });
@@ -343,7 +343,7 @@ export default function Dashboard() {
         formData.append('Logo', logoFile);
       }
 
-      const response = await fetch('/api/update', {
+      const response = await fetch('/CMS/api/update', {
         method: 'POST',
         body: formData,
       });
@@ -380,7 +380,7 @@ export default function Dashboard() {
         formData.append('id', websiteId);
         formData.append('archive', (!websiteToUpdate.archive).toString());
 
-        const response = await fetch('/api/update', {
+        const response = await fetch('/CMS/api/update', {
           method: 'POST',
           body: formData,
         });
@@ -424,7 +424,7 @@ export default function Dashboard() {
         formData.append('id', websiteId);
         formData.append('highlighted', (!websiteToUpdate.highlighted).toString());
   
-        const response = await fetch('/api/update', {
+        const response = await fetch('/CMS/api/update', {
           method: 'POST',
           body: formData,
         });
@@ -447,7 +447,7 @@ export default function Dashboard() {
 
   const deleteWebsite = async (websiteId: string) => {
     try {
-      const response = await fetch(`/api/update?id=${websiteId}&type=websites`, {
+      const response = await fetch(`/CMS/api/update?id=${websiteId}&type=websites`, {
         method: 'DELETE',
       });
 

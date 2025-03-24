@@ -237,7 +237,7 @@ export default function SocialDashboard() {
     setError(null)
     try {
       const response = await fetch(
-        `/api/fetch?page=${currentPage}&limit=${socialsPerPage}&types=social&search=${encodeURIComponent(searchQuery)}`,
+        `/CMS/api/fetch?page=${currentPage}&limit=${socialsPerPage}&types=social&search=${encodeURIComponent(searchQuery)}`,
         {
           method: "GET",
         },
@@ -796,7 +796,7 @@ export default function SocialDashboard() {
           })
         })
 
-        const response = await fetch("/api/update", {
+        const response = await fetch("/CMS/api/update", {
           method: "POST",
           body: formData,
         })
@@ -870,7 +870,7 @@ export default function SocialDashboard() {
         })
       })
 
-      const response = await fetch("/api/update", {
+      const response = await fetch("/CMS/api/update", {
         method: "POST",
         body: formData,
       })
@@ -917,7 +917,7 @@ export default function SocialDashboard() {
         formData.append("id", socialId)
         formData.append("archive", newArchiveStatus.toString())
 
-        const response = await fetch("/api/update", {
+        const response = await fetch("/CMS/api/update", {
           method: "POST",
           body: formData,
         })
@@ -978,7 +978,7 @@ export default function SocialDashboard() {
         formData.append("id", socialId)
         formData.append("highlighted", newHighlightStatus.toString())
 
-        const response = await fetch("/api/update", {
+        const response = await fetch("/CMS/api/update", {
           method: "POST",
           body: formData,
         })
@@ -1018,7 +1018,7 @@ export default function SocialDashboard() {
 
   const deleteSocial = async (socialId: string) => {
     try {
-      const response = await fetch(`/api/update?id=${socialId}&type=social`, {
+      const response = await fetch(`/CMS/api/update?id=${socialId}&type=social`, {
         method: "DELETE",
       })
 

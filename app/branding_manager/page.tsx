@@ -203,7 +203,7 @@ export default function Dashboard() {
     setError(null)
     try {
       const response = await fetch(
-        `/api/fetch?page=${currentPage}&limit=${brandingsPerPage}&types=branding&search=${encodeURIComponent(searchQuery)}`,
+        `/CMS/api/fetch?page=${currentPage}&limit=${brandingsPerPage}&types=branding&search=${encodeURIComponent(searchQuery)}`,
         {
           method: "GET",
         },
@@ -663,7 +663,7 @@ export default function Dashboard() {
           formData.append(`goodiesFile_${index}`, file)
         })
 
-        const response = await fetch("/api/update", {
+        const response = await fetch("/CMS/api/update", {
           method: "POST",
           body: formData,
         })
@@ -748,7 +748,7 @@ export default function Dashboard() {
         formData.append(`goodiesFile_${index}`, file)
       })
 
-      const response = await fetch("/api/update", {
+      const response = await fetch("/CMS/api/update", {
         method: "POST",
         body: formData,
       })
@@ -799,7 +799,7 @@ export default function Dashboard() {
         formData.append("id", brandingId)
         formData.append("archive", newArchiveStatus.toString())
 
-        const response = await fetch("/api/update", {
+        const response = await fetch("/CMS/api/update", {
           method: "POST",
           body: formData,
         })
@@ -860,7 +860,7 @@ export default function Dashboard() {
         formData.append("id", brandingId)
         formData.append("highlighted", newHighlightStatus.toString())
 
-        const response = await fetch("/api/update", {
+        const response = await fetch("/CMS/api/update", {
           method: "POST",
           body: formData,
         })
@@ -900,7 +900,7 @@ export default function Dashboard() {
 
   const deleteBranding = async (brandingId: string) => {
     try {
-      const response = await fetch(`/api/update?id=${brandingId}&type=branding`, {
+      const response = await fetch(`/CMS/api/update?id=${brandingId}&type=branding`, {
         method: "DELETE",
       })
 

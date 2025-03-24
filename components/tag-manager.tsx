@@ -35,7 +35,7 @@ export default function TagManager({ tagType, onTagTypeUpdated }: TagManagerProp
 
     setIsSubmitting(true)
     try {
-      const response = await fetch(`/api/tag-types/${tagType.id}/tags`, {
+      const response = await fetch(`/CMS/api/tag-types/${tagType.id}/tags`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -63,7 +63,7 @@ export default function TagManager({ tagType, onTagTypeUpdated }: TagManagerProp
 
     setIsSubmitting(true)
     try {
-      const response = await fetch(`/api/tag-types/${tagType.id}/tags/${tagId}`, {
+      const response = await fetch(`/CMS/api/tag-types/${tagType.id}/tags/${tagId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -90,7 +90,7 @@ export default function TagManager({ tagType, onTagTypeUpdated }: TagManagerProp
     }
 
     try {
-      const response = await fetch(`/api/tag-types/${tagType.id}/tags/${tagId}`, {
+      const response = await fetch(`/CMS/api/tag-types/${tagType.id}/tags/${tagId}`, {
         method: "DELETE",
       })
 
