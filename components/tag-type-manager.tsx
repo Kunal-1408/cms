@@ -10,28 +10,26 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Plus, Trash, Edit, Check, X, ChevronDown, ChevronUp } from "lucide-react"
 import type { TagType } from "@/types/tag-types"
 import ColorPicker from "@/components/color-picker"
-import { cn } from "@/lib/utils"
 import TagManager from "@/components/tag-manager"
 
 interface TagTypeManagerProps {
+  projectTypeId: string
   tagTypes: TagType[]
-  selectedTagType: TagType | null
   onTagTypeCreated: (tagType: TagType) => void
   onTagTypeUpdated: (tagType: TagType) => void
   onTagTypeDeleted: (tagTypeId: string) => void
-  onTagTypeSelect: (tagType: TagType) => void
 }
 
 export default function TagTypeManager({
+  projectTypeId,
   tagTypes,
-  selectedTagType,
   onTagTypeCreated,
   onTagTypeUpdated,
   onTagTypeDeleted,
-  onTagTypeSelect,
 }: TagTypeManagerProps) {
   const [isCreating, setIsCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [selectedTagTypeId, setSelectedTagTypeId] = useState<string | null>(null)
   const [name, setName] = useState("")
   const [color, setColor] = useState("#3B82F6") // Default blue color
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -42,7 +40,7 @@ export default function TagTypeManager({
 
     setIsSubmitting(true)
     try {
-      const response = await fetch("/CMS/api/tag-types", {
+      const response = await fetch(`/CMS/api/project-types/${projectTypeId}/tag-types`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -69,7 +67,7 @@ export default function TagTypeManager({
 
     setIsSubmitting(true)
     try {
-      const response = await fetch(`/CMS/api/tag-types/${tagTypeId}`, {
+      const response = await fetch(`/CMS/api/project-types/${projectTypeId}/tag-types/${tagTypeId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -95,13 +93,16 @@ export default function TagTypeManager({
     }
 
     try {
-      const response = await fetch(`/CMS/api/tag-types/${tagTypeId}`, {
+      const response = await fetch(`/CMS/api/project-types/${projectTypeId}/tag-types/${tagTypeId}`, {
         method: "DELETE",
       })
 
       if (!response.ok) throw new Error("Failed to delete tag type")
 
       onTagTypeDeleted(tagTypeId)
+      if (selectedTagTypeId === tagTypeId) {
+        setSelectedTagTypeId(null)
+      }
     } catch (error) {
       console.error("Error deleting tag type:", error)
     }
@@ -117,6 +118,10 @@ export default function TagTypeManager({
     setEditingId(null)
     setName("")
     setColor("#3B82F6")
+  }
+
+  const toggleTagType = (tagTypeId: string) => {
+    setSelectedTagTypeId(selectedTagTypeId === tagTypeId ? null : tagTypeId)
   }
 
   return (
@@ -163,7 +168,7 @@ export default function TagTypeManager({
         </Card>
       )}
 
-      <div className="grid gap-4">
+      <div className="grid gap-2">
         {tagTypes.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">No tag types found. Create your first tag type!</div>
         ) : (
@@ -171,11 +176,8 @@ export default function TagTypeManager({
             <div key={tagType.id} className="border rounded-md overflow-hidden">
               {/* Tag Type Header */}
               <div
-                className={cn(
-                  "p-4 flex justify-between items-center cursor-pointer hover:bg-accent/50 transition-colors",
-                  selectedTagType?.id === tagType.id && "bg-accent",
-                )}
-                onClick={() => editingId !== tagType.id && onTagTypeSelect(tagType)}
+                className="p-4 flex justify-between items-center cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => editingId !== tagType.id && toggleTagType(tagType.id)}
               >
                 {editingId === tagType.id ? (
                   <div className="flex-1 space-y-4">
@@ -237,7 +239,7 @@ export default function TagTypeManager({
                       >
                         <Trash className="h-4 w-4" />
                       </Button>
-                      {selectedTagType?.id === tagType.id ? (
+                      {selectedTagTypeId === tagType.id ? (
                         <ChevronUp className="h-5 w-5 text-muted-foreground" />
                       ) : (
                         <ChevronDown className="h-5 w-5 text-muted-foreground" />
@@ -248,9 +250,9 @@ export default function TagTypeManager({
               </div>
 
               {/* Tag Manager (only shown for selected tag type) */}
-              {selectedTagType?.id === tagType.id && !editingId && (
+              {selectedTagTypeId === tagType.id && !editingId && (
                 <div className="border-t p-4 bg-background/50">
-                  <TagManager tagType={tagType} onTagTypeUpdated={onTagTypeUpdated} />
+                  <TagManager projectTypeId={projectTypeId} tagType={tagType} onTagTypeUpdated={onTagTypeUpdated} />
                 </div>
               )}
             </div>

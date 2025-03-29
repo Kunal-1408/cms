@@ -2,57 +2,58 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import TagTypeManager from "@/components/tag-type-manager"
-import type { TagType } from "@/types/tag-types"
+import ProjectTypeManager from "@/components/project-type-manager"
+import type { ProjectType } from "@/types/tag-types"
 
 export default function TagManagementSystem() {
-  const [tagTypes, setTagTypes] = useState<TagType[]>([])
-  const [selectedTagType, setSelectedTagType] = useState<TagType | null>(null)
+  const [projectTypes, setProjectTypes] = useState<ProjectType[]>([])
+  const [selectedProjectType, setSelectedProjectType] = useState<ProjectType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Fetch tag types on component mount
-    fetchTagTypes()
+    // Fetch project types on component mount
+    fetchProjectTypes()
   }, [])
 
-  const fetchTagTypes = async () => {
+  const fetchProjectTypes = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch("/CMS/api/tag-types")
+      const response = await fetch("/CMS/api/project-types")
       const data = await response.json()
-      setTagTypes(data)
 
-      // Select the first tag type by default if available
-      if (data.length > 0 && !selectedTagType) {
-        setSelectedTagType(data[0])
+      setProjectTypes(data)
+
+      // Select the first project type by default if available
+      if (data.length > 0 && !selectedProjectType) {
+        setSelectedProjectType(data[0])
       }
     } catch (error) {
-      console.error("Failed to fetch tag types:", error)
+      console.error("Failed to fetch project types:", error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleTagTypeSelect = (tagType: TagType) => {
-    setSelectedTagType(tagType)
+  const handleProjectTypeSelect = (projectType: ProjectType) => {
+    setSelectedProjectType(projectType)
   }
 
-  const handleTagTypeCreated = (newTagType: TagType) => {
-    setTagTypes([...tagTypes, newTagType])
-    setSelectedTagType(newTagType)
+  const handleProjectTypeCreated = (newProjectType: ProjectType) => {
+    setProjectTypes([...projectTypes, newProjectType])
+    setSelectedProjectType(newProjectType)
   }
 
-  const handleTagTypeUpdated = (updatedTagType: TagType) => {
-    setTagTypes(tagTypes.map((tt) => (tt.id === updatedTagType.id ? updatedTagType : tt)))
-    if (selectedTagType?.id === updatedTagType.id) {
-      setSelectedTagType(updatedTagType)
+  const handleProjectTypeUpdated = (updatedProjectType: ProjectType) => {
+    setProjectTypes(projectTypes.map((pt) => (pt.id === updatedProjectType.id ? updatedProjectType : pt)))
+    if (selectedProjectType?.id === updatedProjectType.id) {
+      setSelectedProjectType(updatedProjectType)
     }
   }
 
-  const handleTagTypeDeleted = (deletedTagTypeId: string) => {
-    setTagTypes(tagTypes.filter((tt) => tt.id !== deletedTagTypeId))
-    if (selectedTagType?.id === deletedTagTypeId) {
-      setSelectedTagType(tagTypes.length > 0 ? tagTypes[0] : null)
+  const handleProjectTypeDeleted = (deletedProjectTypeId: string) => {
+    setProjectTypes(projectTypes.filter((pt) => pt.id !== deletedProjectTypeId))
+    if (selectedProjectType?.id === deletedProjectTypeId) {
+      setSelectedProjectType(projectTypes.length > 0 ? projectTypes[0] : null)
     }
   }
 
@@ -60,16 +61,16 @@ export default function TagManagementSystem() {
     <Card className="w-full">
       <CardHeader>
         <CardTitle>Tag Management</CardTitle>
-        <CardDescription>Create and manage tag types and tags with custom colors</CardDescription>
+        <CardDescription>Create and manage project types, tag types, and tags with custom colors</CardDescription>
       </CardHeader>
       <CardContent>
-        <TagTypeManager
-          tagTypes={tagTypes}
-          onTagTypeCreated={handleTagTypeCreated}
-          onTagTypeUpdated={handleTagTypeUpdated}
-          onTagTypeDeleted={handleTagTypeDeleted}
-          onTagTypeSelect={handleTagTypeSelect}
-          selectedTagType={selectedTagType}
+        <ProjectTypeManager
+          projectTypes={projectTypes}
+          onProjectTypeCreated={handleProjectTypeCreated}
+          onProjectTypeUpdated={handleProjectTypeUpdated}
+          onProjectTypeDeleted={handleProjectTypeDeleted}
+          onProjectTypeSelect={handleProjectTypeSelect}
+          selectedProjectType={selectedProjectType}
         />
       </CardContent>
     </Card>

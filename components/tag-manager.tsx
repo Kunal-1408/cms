@@ -12,11 +12,12 @@ import type { TagType, Tag } from "@/types/tag-types"
 import ColorPicker from "@/components/color-picker"
 
 interface TagManagerProps {
+  projectTypeId: string
   tagType: TagType
   onTagTypeUpdated: (tagType: TagType) => void
 }
 
-export default function TagManager({ tagType, onTagTypeUpdated }: TagManagerProps) {
+export default function TagManager({ projectTypeId, tagType, onTagTypeUpdated }: TagManagerProps) {
   const [isCreating, setIsCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState("")
@@ -35,7 +36,7 @@ export default function TagManager({ tagType, onTagTypeUpdated }: TagManagerProp
 
     setIsSubmitting(true)
     try {
-      const response = await fetch(`/CMS/api/tag-types/${tagType.id}/tags`, {
+      const response = await fetch(`/CMS/api/project-types/${projectTypeId}/tag-types/${tagType.id}/tags`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -63,7 +64,7 @@ export default function TagManager({ tagType, onTagTypeUpdated }: TagManagerProp
 
     setIsSubmitting(true)
     try {
-      const response = await fetch(`/CMS/api/tag-types/${tagType.id}/tags/${tagId}`, {
+      const response = await fetch(`/CMS/api/project-types/${projectTypeId}/tag-types/${tagType.id}/tags/${tagId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -90,7 +91,7 @@ export default function TagManager({ tagType, onTagTypeUpdated }: TagManagerProp
     }
 
     try {
-      const response = await fetch(`/CMS/api/tag-types/${tagType.id}/tags/${tagId}`, {
+      const response = await fetch(`/CMS/api/project-types/${projectTypeId}/tag-types/${tagType.id}/tags/${tagId}`, {
         method: "DELETE",
       })
 

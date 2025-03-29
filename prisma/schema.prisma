@@ -404,11 +404,21 @@ model Social {
   banner            String?
   Tags              String[]
 }
+model ProjectType {
+  id       String    @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  tagTypes TagType[]
+
+  @@map("project_types")
+}
+
 model TagType {
-  id    String @id @default(auto()) @map("_id") @db.ObjectId
-  name  String
-  color String
-  tags  Tag[]
+  id           String      @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  color        String
+  tags         Tag[]
+  projectType  ProjectType @relation(fields: [projectTypeId], references: [id], onDelete: Cascade)
+  projectTypeId String      @db.ObjectId
 
   @@map("tag_types")
 }
