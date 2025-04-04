@@ -5,84 +5,71 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { PlusCircle } from "lucide-react"
-import { RichTextEditor } from "@/components/RichtextEditor"
+import { Button } from "@/components/ui/button"
+import { PlusCircle, Trash2 } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 
-interface ContactUsProps {
-  content: {
-    banner: {
-      imageUrl: string
-      title: string
-      description: string
-    }
-    contactForm: {
-      title: string
-      description: string
-      imageSrc: string
-    }
-    contactInfo: {
-      title: string
-      cards: {
-        icon: string
-        title: string
-        content: string
-      }[]
-    }
-    faqs: {
-      title: string
-      items: {
-        question: string
-        answer: string
-      }[]
-      sidebar: {
-        title: string
-        content: string
-      }
-    }
-  }
-}
-
-const initialContent: ContactUsProps["content"] = {
-  banner: {
-    imageUrl: "",
-    title: "",
-    description: "",
-  },
-  contactForm: {
-    title: "",
-    description: "",
-    imageSrc: "",
-  },
-  contactInfo: {
-    title: "",
-    cards: [],
-  },
+interface ContactUsData {
+  id?: string
+  heroImageUrl: string
+  formImageUrl: string
+  contactInfoCards: {
+    icon: string
+    title: string
+    description: string
+  }[]
   faqs: {
-    title: "",
-    items: [],
-    sidebar: {
-      title: "",
-      content: "",
-    },
-  },
+    question: string
+    answer: string
+  }[]
 }
 
-export default function ContactUs() {
-  const [content, setContent] = useState<ContactUsProps["content"]>(initialContent)
+const initialContent: ContactUsData = {
+  heroImageUrl: "",
+  formImageUrl: "",
+  contactInfoCards: [],
+  faqs: [],
+}
+
+export default function ContactUsAdmin() {
+  const [content, setContent] = useState<ContactUsData>(initialContent)
   const [isLoading, setIsLoading] = useState(true)
+  const [heroImageFile, setHeroImageFile] = useState<File | null>(null)
+  const [formImageFile, setFormImageFile] = useState<File | null>(null)
+  const [heroImagePreview, setHeroImagePreview] = useState<string>("")
+  const [formImagePreview, setFormImagePreview] = useState<string>("")
 
   useEffect(() => {
     fetchContent()
   }, [])
 
+  useEffect(() => {
+    // Clean up object URLs when component unmounts or when new files are selected
+    return () => {
+      if (heroImagePreview && heroImagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(heroImagePreview)
+      }
+      if (formImagePreview && formImagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(formImagePreview)
+      }
+    }
+  }, [heroImagePreview, formImagePreview])
+
   const fetchContent = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch("/CMS/api/content")
+      const response = await fetch("/CMS/api/contact-us")
       if (response.ok) {
         const data = await response.json()
-        setContent(data.contactUs || initialContent)
+        setContent(data || initialContent)
+
+        // Set the image URLs for display
+        if (data?.heroImageUrl) {
+          setHeroImagePreview(data.heroImageUrl)
+        }
+        if (data?.formImageUrl) {
+          setFormImagePreview(data.formImageUrl)
+        }
       } else {
         console.error("Failed to fetch content")
         toast({
@@ -103,54 +90,49 @@ export default function ContactUs() {
     }
   }
 
-  const handleContactUsChange = (field: keyof ContactUsProps["content"], value: any) => {
-    setContent((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
-  }
-
   const handleContactInfoCardChange = (
     index: number,
-    field: keyof ContactUsProps["content"]["contactInfo"]["cards"][0],
+    field: keyof ContactUsData["contactInfoCards"][0],
     value: string,
   ) => {
     setContent((prev) => ({
       ...prev,
-      contactInfo: {
-        ...prev.contactInfo,
-        cards: prev.contactInfo.cards.map((card, i) => (i === index ? { ...card, [field]: value } : card)),
-      },
+      contactInfoCards: prev.contactInfoCards.map((card, i) => (i === index ? { ...card, [field]: value } : card)),
     }))
   }
 
   const handleAddContactInfoCard = () => {
     setContent((prev) => ({
       ...prev,
-      contactInfo: {
-        ...prev.contactInfo,
-        cards: [...prev.contactInfo.cards, { icon: "", title: "", content: "" }],
-      },
+      contactInfoCards: [...prev.contactInfoCards, { icon: "", title: "", description: "" }],
+    }))
+  }
+
+  const handleRemoveContactInfoCard = (index: number) => {
+    setContent((prev) => ({
+      ...prev,
+      contactInfoCards: prev.contactInfoCards.filter((_, i) => i !== index),
     }))
   }
 
   const handleFaqChange = (index: number, field: "question" | "answer", value: string) => {
     setContent((prev) => ({
       ...prev,
-      faqs: {
-        ...prev.faqs,
-        items: prev.faqs.items.map((faq, i) => (i === index ? { ...faq, [field]: value } : faq)),
-      },
+      faqs: prev.faqs.map((faq, i) => (i === index ? { ...faq, [field]: value } : faq)),
     }))
   }
 
   const handleAddFaq = () => {
     setContent((prev) => ({
       ...prev,
-      faqs: {
-        ...prev.faqs,
-        items: [...prev.faqs.items, { question: "", answer: "" }],
-      },
+      faqs: [...prev.faqs, { question: "", answer: "" }],
+    }))
+  }
+
+  const handleRemoveFaq = (index: number) => {
+    setContent((prev) => ({
+      ...prev,
+      faqs: prev.faqs.filter((_, i) => i !== index),
     }))
   }
 
@@ -158,49 +140,61 @@ export default function ContactUs() {
     e.preventDefault()
     setIsLoading(true)
     try {
+      // Prepare the data to send
+      const dataToSend = {
+        ...content,
+        // Use the existing URLs if no new files are selected
+        heroImageUrl: heroImageFile ? "" : content.heroImageUrl,
+        formImageUrl: formImageFile ? "" : content.formImageUrl,
+      }
+
       const formData = new FormData()
-      formData.append("data", JSON.stringify({ contactUs: content }))
+      formData.append("data", JSON.stringify(dataToSend))
 
-      // Handle banner image
-      if (
-        content.banner.imageUrl &&
-        (content.banner.imageUrl.startsWith("blob:") || content.banner.imageUrl.startsWith("data:"))
-      ) {
-        const file = await fetchAndCreateFile(content.banner.imageUrl, "contact_us_banner")
-        if (file) {
-          formData.append("images", file, file.name)
-        }
+      // Add image files if they exist
+      if (heroImageFile) {
+        formData.append("heroImage", heroImageFile)
       }
 
-      // Handle contact form image
-      if (
-        content.contactForm.imageSrc &&
-        (content.contactForm.imageSrc.startsWith("blob:") || content.contactForm.imageSrc.startsWith("data:"))
-      ) {
-        const file = await fetchAndCreateFile(content.contactForm.imageSrc, "contact_form_image")
-        if (file) {
-          formData.append("images", file, file.name)
-        }
+      if (formImageFile) {
+        formData.append("formImage", formImageFile)
       }
 
-      const response = await fetch("/CMS/api/content", {
+      const response = await fetch("/CMS/api/contact-us", {
         method: "POST",
         body: formData,
       })
 
       if (response.ok) {
+        // Update content with the response data
+        const updatedData = await response.json()
+        setContent(updatedData)
+
+        // Update image previews
+        if (updatedData.heroImageUrl) {
+          setHeroImagePreview(updatedData.heroImageUrl)
+        }
+        if (updatedData.formImageUrl) {
+          setFormImagePreview(updatedData.formImageUrl)
+        }
+
+        // Reset file states after successful upload
+        setHeroImageFile(null)
+        setFormImageFile(null)
+
         toast({
           title: "Success",
-          description: "Content updated successfully",
+          description: "Contact Us content updated successfully",
         })
       } else {
-        throw new Error("Failed to update content")
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to update content")
       }
     } catch (error) {
       console.error("Error updating content:", error)
       toast({
         title: "Error",
-        description: "Failed to update content. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update content. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -208,15 +202,38 @@ export default function ContactUs() {
     }
   }
 
-  const fetchAndCreateFile = async (url: string, filename: string): Promise<File | null> => {
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this content?")) {
+      return
+    }
+
+    setIsLoading(true)
     try {
-      const response = await fetch(url)
-      const blob = await response.blob()
-      const extension = blob.type.split("/")[1]
-      return new File([blob], `${filename}.${extension}`, { type: blob.type })
+      const response = await fetch("/CMS/api/contact-us", {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Contact Us content deleted successfully",
+        })
+        setContent(initialContent)
+        setHeroImagePreview("")
+        setFormImagePreview("")
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to delete content")
+      }
     } catch (error) {
-      console.error("Error fetching file:", error)
-      return null
+      console.error("Error deleting content:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete content. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -234,165 +251,136 @@ export default function ContactUs() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold mb-2">Banner</h3>
+              <h3 className="text-lg font-semibold mb-2">Hero Section</h3>
               <Input
                 type="file"
                 onChange={(e) => {
                   const file = e.target.files ? e.target.files[0] : null
-                  if (file)
-                    handleContactUsChange("banner", {
-                      ...content.banner,
-                      imageUrl: URL.createObjectURL(file),
-                    })
+                  if (file) {
+                    setHeroImageFile(file)
+                    // Revoke previous object URL if it exists
+                    if (heroImagePreview && heroImagePreview.startsWith("blob:")) {
+                      URL.revokeObjectURL(heroImagePreview)
+                    }
+                    // Create a temporary URL for preview
+                    const previewUrl = URL.createObjectURL(file)
+                    setHeroImagePreview(previewUrl)
+                  }
                 }}
                 accept="image/*"
               />
-              {content.banner?.imageUrl && (
+              {heroImagePreview && (
                 <img
-                  src={content.banner.imageUrl || "/placeholder.svg"}
-                  alt="Contact Us Banner"
-                  className="mt-2 w-full max-h-48 object-cover"
-                />
-              )}
-              <RichTextEditor
-                content={content.banner?.title || ""}
-                onChange={(value) => handleContactUsChange("banner", { ...content.banner, title: value })}
-              />
-              <RichTextEditor
-                content={content.banner?.description || ""}
-                onChange={(value) => handleContactUsChange("banner", { ...content.banner, description: value })}
-              />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Contact Form</h3>
-              <RichTextEditor
-                content={content.contactForm?.title || ""}
-                onChange={(value) =>
-                  handleContactUsChange("contactForm", {
-                    ...content.contactForm,
-                    title: value,
-                  })
-                }
-              />
-              <RichTextEditor
-                content={content.contactForm?.description || ""}
-                onChange={(value) =>
-                  handleContactUsChange("contactForm", {
-                    ...content.contactForm,
-                    description: value,
-                  })
-                }
-              />
-              <Input
-                type="file"
-                onChange={(e) => {
-                  const file = e.target.files ? e.target.files[0] : null
-                  if (file)
-                    handleContactUsChange("contactForm", {
-                      ...content.contactForm,
-                      imageSrc: URL.createObjectURL(file),
-                    })
-                }}
-                accept="image/*"
-              />
-              {content.contactForm?.imageSrc && (
-                <img
-                  src={content.contactForm.imageSrc || "/placeholder.svg"}
-                  alt="Contact Form Image"
+                  src={heroImagePreview || "/placeholder.svg"}
+                  alt="Hero Image"
                   className="mt-2 w-full max-h-48 object-cover"
                 />
               )}
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold mb-2">Contact Info</h3>
-              <RichTextEditor
-                content={content.contactInfo?.title || ""}
-                onChange={(value) =>
-                  handleContactUsChange("contactInfo", {
-                    ...content.contactInfo,
-                    title: value,
-                  })
-                }
+              <h3 className="text-lg font-semibold mb-2">Contact Form Section</h3>
+              <Input
+                type="file"
+                onChange={(e) => {
+                  const file = e.target.files ? e.target.files[0] : null
+                  if (file) {
+                    setFormImageFile(file)
+                    // Revoke previous object URL if it exists
+                    if (formImagePreview && formImagePreview.startsWith("blob:")) {
+                      URL.revokeObjectURL(formImagePreview)
+                    }
+                    // Create a temporary URL for preview
+                    const previewUrl = URL.createObjectURL(file)
+                    setFormImagePreview(previewUrl)
+                  }
+                }}
+                accept="image/*"
               />
-              {content.contactInfo?.cards?.map((card, index) => (
+              {formImagePreview && (
+                <img
+                  src={formImagePreview || "/placeholder.svg"}
+                  alt="Form Image"
+                  className="mt-2 w-full max-h-48 object-cover"
+                />
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Contact Info Cards</h3>
+              {content.contactInfoCards?.map((card, index) => (
                 <div key={index} className="mb-2 p-2 border rounded">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium">Card {index + 1}</h4>
+                    <Button variant="ghost" size="sm" onClick={() => handleRemoveContactInfoCard(index)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <Input
-                    placeholder="Icon"
+                    placeholder="Icon (SVG code)"
                     value={card.icon || ""}
                     onChange={(e) => handleContactInfoCardChange(index, "icon", e.target.value)}
                     className="mb-2"
                   />
-                  <RichTextEditor
-                    content={card.title || ""}
-                    onChange={(value) => handleContactInfoCardChange(index, "title", value)}
+                  <Input
+                    placeholder="Title"
+                    value={card.title || ""}
+                    onChange={(e) => handleContactInfoCardChange(index, "title", e.target.value)}
+                    className="mb-2"
                   />
-                  <RichTextEditor
-                    content={card.content || ""}
-                    onChange={(value) => handleContactInfoCardChange(index, "content", value)}
+                  <Input
+                    placeholder="Description"
+                    value={card.description || ""}
+                    onChange={(e) => handleContactInfoCardChange(index, "description", e.target.value)}
+                    className="mb-2"
                   />
                 </div>
               ))}
-              <button type="button" onClick={handleAddContactInfoCard} className="mt-2">
+              <Button type="button" variant="outline" onClick={handleAddContactInfoCard} className="mt-2">
                 <PlusCircle className="w-4 h-4 mr-2" /> Add Contact Info Card
-              </button>
+              </Button>
             </div>
 
             <div>
               <h3 className="text-lg font-semibold mb-2">FAQs</h3>
-              <RichTextEditor
-                content={content.faqs?.title || ""}
-                onChange={(value) => handleContactUsChange("faqs", { ...content.faqs, title: value })}
-              />
-              {content.faqs?.items?.map((faq, index) => (
+              {content.faqs?.map((faq, index) => (
                 <div key={index} className="mb-2 p-2 border rounded">
-                  <RichTextEditor
-                    content={faq.question || ""}
-                    onChange={(value) => handleFaqChange(index, "question", value)}
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium">FAQ {index + 1}</h4>
+                    <Button variant="ghost" size="sm" onClick={() => handleRemoveFaq(index)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Input
+                    placeholder="Question"
+                    value={faq.question || ""}
+                    onChange={(e) => handleFaqChange(index, "question", e.target.value)}
+                    className="mb-2"
                   />
-                  <RichTextEditor
-                    content={faq.answer || ""}
-                    onChange={(value) => handleFaqChange(index, "answer", value)}
+                  <Input
+                    placeholder="Answer"
+                    value={faq.answer || ""}
+                    onChange={(e) => handleFaqChange(index, "answer", e.target.value)}
+                    className="mb-2"
                   />
                 </div>
               ))}
-              <button type="button" onClick={handleAddFaq} className="mt-2">
+              <Button type="button" variant="outline" onClick={handleAddFaq} className="mt-2">
                 <PlusCircle className="w-4 h-4 mr-2" /> Add FAQ
-              </button>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-2">FAQ Sidebar</h3>
-              <RichTextEditor
-                content={content.faqs?.sidebar?.title || ""}
-                onChange={(value) =>
-                  handleContactUsChange("faqs", {
-                    ...content.faqs,
-                    sidebar: { ...content.faqs.sidebar, title: value },
-                  })
-                }
-              />
-              <RichTextEditor
-                content={content.faqs?.sidebar?.content || ""}
-                onChange={(value) =>
-                  handleContactUsChange("faqs", {
-                    ...content.faqs,
-                    sidebar: { ...content.faqs.sidebar, content: value },
-                  })
-                }
-              />
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        <button
-          type="submit"
-          className="mt-4 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          disabled={isLoading}
-        >
-          {isLoading ? "Saving..." : "Save Changes"}
-        </button>
+        <div className="mt-4 flex gap-4">
+          <Button type="submit" className="px-4 py-2" disabled={isLoading}>
+            {isLoading ? "Saving..." : "Save Changes"}
+          </Button>
+
+          <Button type="button" variant="destructive" onClick={handleDelete} disabled={isLoading}>
+            Delete Content
+          </Button>
+        </div>
       </form>
     </div>
   )

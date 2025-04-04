@@ -129,25 +129,7 @@ type TextsWhyChooseUs {
   title       String
 }
 
-type TextsContactUs {
-  banner           TextsContactUsBanner
-  contactInfoCards TextsContactUsContactInfoCards[]
-  faqs             TextsContactUsFaqs[]
-}
 
-type TextsContactUsBanner {
-  imageUrl String
-}
-
-type TextsContactUsContactInfoCards {
-  heading     String
-  description String
-}
-
-type TextsContactUsFaqs {
-  question String
-  answer   String
-}
 
 // New types for About Us page
 type TextsAboutUs {
@@ -248,7 +230,6 @@ model texts {
   servicePages TextsServicePages?
   services     TextsServices[]
   whyChooseUs  TextsWhyChooseUs[]
-  contactUs    TextsContactUs?    // New field for Contact Us page
   aboutUs      TextsAboutUs[]     // New field for About Us page
 }
 model User {
@@ -431,4 +412,22 @@ model Tag {
   tagTypeId String  @db.ObjectId
 
   @@map("tags")
+}
+model ContactUs {
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  heroImageUrl    String
+  formImageUrl    String
+  contactInfoCards ContactInfoCard[]
+  faqs            FAQ[]
+}
+
+type ContactInfoCard {
+  icon            String
+  title           String
+  description     String
+}
+
+type FAQ {
+  question        String
+  answer          String
 }
