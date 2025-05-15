@@ -30,7 +30,7 @@ export default function CMSContent() {
           <p className="text-muted-foreground">
             You are logged in as: {session?.user?.email}
           </p>
-          <Link href="/CMS/Dashboard">
+          <Link href="/Dashboard">
             <button className="mt-4 bg-orange-400 text-sm text-white font-semibold h-10 px-4 py-2 border hover:bg-orange-500 rounded">
               Get Started
             </button>
