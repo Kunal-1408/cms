@@ -333,26 +333,16 @@ type Campaign {
 }
 
 model Branding {
-  id            String         @id @default(auto()) @map("_id") @db.ObjectId
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  
-  // Basic Information
-  title         String
-  description   String
-  clientName    String?
-  
-  // Sections using embedded types
-  logoSection   LogoSection
-  bannerSection BannerSection
-  standeeSection StandeeSection?
-  cardSection   CardSection?
-  goodiesSection GoodiesSection?
-  
-  // Additional metadata
-  tags          String[]
-  archive       Boolean        @default(false)
-  highlighted   Boolean        @default(false)
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  clientName  String?
+  sections    Json      // Store sections as a JSON field
+  tags        String[]
+  archive     Boolean   @default(false)
+  highlighted Boolean   @default(false)
+  createdAt   String
+  updatedAt   String
 }
 
 model Social {

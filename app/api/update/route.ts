@@ -274,82 +274,49 @@ export async function POST(req: NextRequest) {
           })
         }
         break
-      case "branding":
-        // Parse JSON strings for nested sections or create new objects if they're simple strings
-        let brandingLogoSection
+case "branding":
+        // NEW IMPLEMENTATION FOR BRANDING WITH DYNAMIC SECTIONS
+        
+        // Parse the sections array from form data
+        let sections = []
         try {
-          brandingLogoSection = data.logoSection ? JSON.parse(data.logoSection) : { logo: "", description: "" }
-          // If logoSection is a string after parsing (not an object), create a proper object
-          if (typeof brandingLogoSection !== "object" || brandingLogoSection === null) {
-            brandingLogoSection = { logo: "", description: data.logoSection || "" }
-          }
+          sections = JSON.parse(formData.get("sections") as string || "[]")
         } catch (e) {
-          // If parsing fails, create a default object with the string as description
-          brandingLogoSection = { logo: "", description: data.logoSection || "" }
+          console.error("Error parsing sections:", e)
+          sections = []
         }
-
-        let brandingBannerSection
+        
+        // Parse tags
+        let tags = []
         try {
-          brandingBannerSection = data.bannerSection ? JSON.parse(data.bannerSection) : { description: "", banners: [] }
-          // If bannerSection is a string after parsing (not an object), create a proper object
-          if (typeof brandingBannerSection !== "object" || brandingBannerSection === null) {
-            brandingBannerSection = { description: data.bannerSection || "", banners: [] }
-          }
+          tags = Array.isArray(data.tags) ? data.tags : JSON.parse(data.tags || "[]")
         } catch (e) {
-          // If parsing fails, create a default object with the string as description
-          brandingBannerSection = { description: data.bannerSection || "", banners: [] }
+          console.error("Error parsing tags:", e)
+          tags = []
         }
 
-        // Optional sections - only parse if they exist
-        let standeeSection
-        try {
-          standeeSection = data.standeeSection ? JSON.parse(data.standeeSection) : undefined
-        } catch (e) {
-          // If parsing fails but there's a string, create a section with that as description
-          if (data.standeeSection) {
-            standeeSection = { description: data.standeeSection, standees: [] }
-          }
-        }
-
-        let cardSection
-        try {
-          cardSection = data.cardSection ? JSON.parse(data.cardSection) : undefined
-        } catch (e) {
-          // If parsing fails but there's a string, create a section with that as description
-          if (data.cardSection) {
-            cardSection = { description: data.cardSection, card: ["", ""] }
-          }
-        }
-
-        let goodiesSection
-        try {
-          goodiesSection = data.goodiesSection ? JSON.parse(data.goodiesSection) : undefined
-        } catch (e) {
-          // If parsing fails but there's a string, create a section with that as description
-          if (data.goodiesSection) {
-            goodiesSection = { description: data.goodiesSection, goodies: [] }
-          }
-        }
-
-        // Handle file uploads for logo
-        if (data.logoFile) {
-          brandingLogoSection.logo = data.logoFile // S3 URL already set in the file processing loop
-        }
-
-        // Handle file uploads for banners
-        for (const key in data) {
-          if (key.startsWith("bannerFile_")) {
-            brandingBannerSection.banners.push(data[key])
-          } else if (key.startsWith("standeeFile_") && standeeSection) {
-            if (!standeeSection.standees) standeeSection.standees = []
-            standeeSection.standees.push(data[key])
-          } else if (key.startsWith("cardFile_") && cardSection) {
-            if (!cardSection.card) cardSection.card = []
-            cardSection.card.push(data[key])
-          } else if (key.startsWith("goodiesFile_") && goodiesSection) {
-            if (!goodiesSection.goodies) goodiesSection.goodies = []
-            goodiesSection.goodies.push(data[key])
-          }
+        // Process file uploads for sections
+        for (let i = 0; formData.has(`file_${i}`); i++) {
+          const file = formData.get(`file_${i}`) as File
+          const sectionId = formData.get(`file_${i}_sectionId`) as string
+          
+          if (!file || !sectionId) continue
+          
+          // Upload file to S3
+          const s3Url = await uploadToS3(file)
+          
+          // Find the section this file belongs to
+          const sectionIndex = sections.findIndex((s: any) => s.id === sectionId)
+          if (sectionIndex === -1) continue
+          
+          // Add to section's assets
+          if (!sections[sectionIndex].assets) sections[sectionIndex].assets = []
+          sections[sectionIndex].assets.push({
+            id: `asset_${Date.now()}_${i}`,
+            url: s3Url,
+            name: file.name,
+            type: file.type
+          })
         }
 
         // Create or update the branding record
@@ -360,14 +327,10 @@ export async function POST(req: NextRequest) {
               title: data.title,
               description: data.description,
               clientName: data.clientName || null,
-              logoSection: brandingLogoSection,
-              bannerSection: brandingBannerSection,
-              standeeSection: standeeSection,
-              cardSection: cardSection,
-              goodiesSection: goodiesSection,
-              tags: Array.isArray(data.tags) ? data.tags : JSON.parse(data.tags || "[]"),
-              archive: data.archive === "true",
-              highlighted: data.highlighted === "true",
+              sections: sections, // Store as JSON
+              tags: tags,
+              archive: data.archive === true || data.archive === "true",
+              highlighted: data.highlighted === true || data.highlighted === "true",
               updatedAt: new Date().toISOString(),
             },
           })
@@ -377,14 +340,10 @@ export async function POST(req: NextRequest) {
               title: data.title,
               description: data.description,
               clientName: data.clientName || null,
-              logoSection: brandingLogoSection,
-              bannerSection: brandingBannerSection,
-              standeeSection: standeeSection,
-              cardSection: cardSection,
-              goodiesSection: goodiesSection,
-              tags: Array.isArray(data.tags) ? data.tags : JSON.parse(data.tags || "[]"),
-              archive: data.archive === "true",
-              highlighted: data.highlighted === "true",
+              sections: sections, // Store as JSON
+              tags: tags,
+              archive: data.archive === true || data.archive === "true",
+              highlighted: data.highlighted === true || data.highlighted === "true",
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             },
