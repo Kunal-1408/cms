@@ -143,22 +143,16 @@ export default function Dashboard() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Add these new state variables after the existing ones
+  const [allTags, setAllTags] = useState<TagGroup[]>([])
+  const [isLoadingTags, setIsLoadingTags] = useState(true)
   const brandingsPerPage = 10
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   // File upload states
   const [fileUploads, setFileUploads] = useState<FileUpload[]>([])
 
-  // Tag groups
-  const allTags: TagGroup[] = [
-    { title: "Brand Type", tags: ["Corporate", "Startup", "Retail", "Educational"], color: "hsl(221, 83%, 53%)" },
-    { title: "Material", tags: ["Print", "Digital", "Merchandise", "Packaging"], color: "hsl(140, 71%, 45%)" },
-    {
-      title: "Campaign",
-      tags: ["Launch", "Rebrand", "Event", "Seasonal"],
-      color: "hsl(291, 64%, 42%)",
-    },
-  ]
+  // Remove the hardcoded allTags array - it will now be fetched from API
 
   // Section types
   const sectionTypes = [
@@ -190,6 +184,45 @@ export default function Dashboard() {
   // Fetch brandings on component mount
   useEffect(() => {
     fetchBrandings()
+  }, [])
+
+  // Fetch tags from the API for the "Branding" project type
+  useEffect(() => {
+    const fetchTags = async () => {
+      setIsLoadingTags(true)
+      try {
+        const response = await fetch("/api/tags?projectType=Branding")
+        const data = await response.json()
+
+        if (data.tags && Array.isArray(data.tags)) {
+          setAllTags(data.tags)
+        } else {
+          console.error("Unexpected API response structure:", data)
+          // Fallback tags in case API fails
+          setAllTags([
+            {
+              title: "Brand Type",
+              tags: ["Corporate", "Startup", "Retail", "Educational"],
+              color: "hsl(221, 83%, 53%)",
+            },
+            { title: "Material", tags: ["Print", "Digital", "Merchandise", "Packaging"], color: "hsl(140, 71%, 45%)" },
+            { title: "Campaign", tags: ["Launch", "Rebrand", "Event", "Seasonal"], color: "hsl(291, 64%, 42%)" },
+          ])
+        }
+      } catch (error) {
+        console.error("Error fetching tags:", error)
+        // Fallback tags in case API fails
+        setAllTags([
+          { title: "Brand Type", tags: ["Corporate", "Startup", "Retail", "Educational"], color: "hsl(221, 83%, 53%)" },
+          { title: "Material", tags: ["Print", "Digital", "Merchandise", "Packaging"], color: "hsl(140, 71%, 45%)" },
+          { title: "Campaign", tags: ["Launch", "Rebrand", "Event", "Seasonal"], color: "hsl(291, 64%, 42%)" },
+        ])
+      } finally {
+        setIsLoadingTags(false)
+      }
+    }
+
+    fetchTags()
   }, [])
 
   // Handle click outside to close popover
@@ -1322,45 +1355,51 @@ export default function Dashboard() {
                           </span>
                         ))}
                       </div>
-                      <div className="mt-2 p-2">
-                        <div className="flex flex-col space-y-4">
-                          {allTags.map((tagGroup) => (
-                            <div
-                              key={tagGroup.title}
-                              className="pb-2 flex flex-col border border-dashed border-gray-200 rounded-md"
-                            >
-                              <h5 className="text-md font-semibold mb-2" style={{ color: tagGroup.color }}>
-                                {tagGroup.title}
-                              </h5>
-                              <div className="flex flex-wrap gap-2">
-                                {tagGroup.tags.map((tag) => (
-                                  <span
-                                    key={`${tagGroup.title}-${tag}`}
-                                    className="cursor-pointer h-6 max-w-full flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full border hover:shadow-[3px_3px_0px_0px_rgba(0,0,0)] transition duration-200"
-                                    style={{
-                                      backgroundColor: (isAddingBranding
-                                        ? newBranding.tags
-                                        : (editedBranding?.tags ?? [])
-                                      ).includes(tag)
-                                        ? `color-mix(in srgb, ${tagGroup.color} 25%, white)`
-                                        : "white",
-                                      color: tagGroup.color,
-                                      borderColor: tagGroup.color,
-                                    }}
-                                    onClick={() =>
-                                      (isAddingBranding ? newBranding.tags : (editedBranding?.tags ?? [])).includes(tag)
-                                        ? removeTag(tag)
-                                        : addTag(tag)
-                                    }
-                                  >
-                                    {tag}
-                                  </span>
-                                ))}
+                      {isLoadingTags ? (
+                        <div className="mt-2 p-4 text-center text-sm text-muted-foreground">Loading tags...</div>
+                      ) : (
+                        <div className="mt-2 p-2">
+                          <div className="flex flex-col space-y-4">
+                            {allTags.map((tagGroup) => (
+                              <div
+                                key={tagGroup.title}
+                                className="pb-2 flex flex-col border border-dashed border-gray-200 rounded-md"
+                              >
+                                <h5 className="text-md font-semibold mb-2" style={{ color: tagGroup.color }}>
+                                  {tagGroup.title}
+                                </h5>
+                                <div className="flex flex-wrap gap-2">
+                                  {tagGroup.tags.map((tag) => (
+                                    <span
+                                      key={`${tagGroup.title}-${tag}`}
+                                      className="cursor-pointer h-6 max-w-full flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full border hover:shadow-[3px_3px_0px_0px_rgba(0,0,0)] transition duration-200"
+                                      style={{
+                                        backgroundColor: (isAddingBranding
+                                          ? newBranding.tags
+                                          : (editedBranding?.tags ?? [])
+                                        ).includes(tag)
+                                          ? `color-mix(in srgb, ${tagGroup.color} 25%, white)`
+                                          : "white",
+                                        color: tagGroup.color,
+                                        borderColor: tagGroup.color,
+                                      }}
+                                      onClick={() =>
+                                        (isAddingBranding ? newBranding.tags : (editedBranding?.tags ?? [])).includes(
+                                          tag,
+                                        )
+                                          ? removeTag(tag)
+                                          : addTag(tag)
+                                      }
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 )}

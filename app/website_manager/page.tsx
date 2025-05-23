@@ -1,18 +1,26 @@
-'use client'
+"use client"
+
+import type React from "react"
 
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowUpDown, ChevronLeft, ChevronRight, File, Globe, MoreHorizontal, PlusCircle, Search, Star, X, Upload, Trash2 } from 'lucide-react'
-
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  File,
+  Globe,
+  MoreHorizontal,
+  PlusCircle,
+  Search,
+  Star,
+  X,
+  Upload,
+  Trash2,
+} from "lucide-react"
+
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,33 +29,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 const getImageUrl = (path: string | null) => {
-  if (!path) return '/placeholder.svg?height=50&width=50';
-  return path.startsWith('http') || path.startsWith('/') ? path : `/uploads/${path}`;
-};
+  if (!path) return "/placeholder.svg?height=50&width=50"
+  return path.startsWith("http") || path.startsWith("/") ? path : `/uploads/${path}`
+}
 
 interface Website {
   id: string
-  backupDate: string|null
-  Content_Update_Date: string|null
+  backupDate: string | null
+  Content_Update_Date: string | null
   Description: string
   Status: string
   Tags: string[]
   Title: string
-  URL: string|null
+  URL: string | null
   archive: boolean
   highlighted: boolean
-  Images: string|null
-  Logo: string|null
+  Images: string | null
+  Logo: string | null
 }
 
 interface TagGroup {
@@ -59,7 +60,7 @@ interface TagGroup {
 interface Notification {
   id: number
   message: string
-  type: 'success' | 'error'
+  type: "success" | "error"
 }
 
 export default function Dashboard() {
@@ -78,6 +79,9 @@ export default function Dashboard() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Add these new state variables for dynamic tags
+  const [allTags, setAllTags] = useState<TagGroup[]>([])
+  const [isLoadingTags, setIsLoadingTags] = useState(true)
   const websitesPerPage = 10
 
   const [imagesFile, setImagesFile] = useState<File | null>(null)
@@ -85,30 +89,69 @@ export default function Dashboard() {
   const [existingImagesUrl, setExistingImagesUrl] = useState<string | null>(null)
   const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null)
 
-  const allTags: TagGroup[] = [
-    {title:"Site Type", tags:["E-commerce","Dynamic","Micro"], color: "hsl(221, 83%, 53%)"},
-    {title:"Industry", tags:["Agriculture","Healthcare","Manufacturing","Fashion","Cosmetic"], color: "hsl(140, 71%, 45%)"},
-    {title:"Country", tags:["India","Dubai","Sri-Lanka"], color: "hsl(291, 64%, 42%)"}
-  ]
+  // Remove the hardcoded allTags array - it will now be fetched from API
 
   const [newWebsite, setNewWebsite] = useState<Website>({
-    id: '',
-    backupDate: '',
-    Content_Update_Date: new Date().toISOString().split('T')[0],
-    Description: '',
-    Status: 'Active',
+    id: "",
+    backupDate: "",
+    Content_Update_Date: new Date().toISOString().split("T")[0],
+    Description: "",
+    Status: "Active",
     Tags: [],
-    Title: '',
-    URL: '',
+    Title: "",
+    URL: "",
     archive: false,
     highlighted: false,
     Images: null,
-    Logo: null
+    Logo: null,
   })
 
   useEffect(() => {
     fetchWebsites()
   }, [currentPage, searchQuery])
+
+  // Fetch tags from the API for the "Website" project type
+  useEffect(() => {
+    const fetchTags = async () => {
+      setIsLoadingTags(true)
+      try {
+        const response = await fetch("/api/tags?projectType=Website")
+        const data = await response.json()
+
+        if (data.tags && Array.isArray(data.tags)) {
+          setAllTags(data.tags)
+        } else {
+          console.error("Unexpected API response structure:", data)
+          // Fallback tags in case API fails
+          setAllTags([
+            { title: "Site Type", tags: ["E-commerce", "Dynamic", "Micro"], color: "hsl(221, 83%, 53%)" },
+            {
+              title: "Industry",
+              tags: ["Agriculture", "Healthcare", "Manufacturing", "Fashion", "Cosmetic"],
+              color: "hsl(140, 71%, 45%)",
+            },
+            { title: "Country", tags: ["India", "Dubai", "Sri-Lanka"], color: "hsl(291, 64%, 42%)" },
+          ])
+        }
+      } catch (error) {
+        console.error("Error fetching tags:", error)
+        // Fallback tags in case API fails
+        setAllTags([
+          { title: "Site Type", tags: ["E-commerce", "Dynamic", "Micro"], color: "hsl(221, 83%, 53%)" },
+          {
+            title: "Industry",
+            tags: ["Agriculture", "Healthcare", "Manufacturing", "Fashion", "Cosmetic"],
+            color: "hsl(140, 71%, 45%)",
+          },
+          { title: "Country", tags: ["India", "Dubai", "Sri-Lanka"], color: "hsl(291, 64%, 42%)" },
+        ])
+      } finally {
+        setIsLoadingTags(false)
+      }
+    }
+
+    fetchTags()
+  }, [])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -119,9 +162,9 @@ export default function Dashboard() {
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener("mousedown", handleClickOutside)
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [])
 
@@ -129,79 +172,82 @@ export default function Dashboard() {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await fetch(`/CMS/api/fetch?page=${currentPage}&limit=${websitesPerPage}&types=websites&search=${encodeURIComponent(searchQuery)}`, {
-        method: 'GET',
-      });
-  
+      const response = await fetch(
+        `/CMS/api/fetch?page=${currentPage}&limit=${websitesPerPage}&types=websites&search=${encodeURIComponent(searchQuery)}`,
+        {
+          method: "GET",
+        },
+      )
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
-  
-      const data = await response.json();
-      console.log('Fetched data:', data)
-      
+
+      const data = await response.json()
+      console.log("Fetched data:", data)
+
       if (data.websites && Array.isArray(data.websites.data)) {
-        setWebsites(data.websites.data);
-        setFilteredWebsites(data.websites.data);
-        setTotal(data.websites.total);
+        setWebsites(data.websites.data)
+        setFilteredWebsites(data.websites.data)
+        setTotal(data.websites.total)
       } else {
-        console.error('Unexpected data structure:', data);
+        console.error("Unexpected data structure:", data)
         setError("Unexpected data structure received for websites")
-        setWebsites([]);
-        setFilteredWebsites([]);
-        setTotal(0);
+        setWebsites([])
+        setFilteredWebsites([])
+        setTotal(0)
       }
     } catch (error) {
-      console.error('Error fetching websites:', error);
+      console.error("Error fetching websites:", error)
       setError("Failed to fetch websites")
-      setWebsites([]);
-      setFilteredWebsites([]);
-      setTotal(0);
+      setWebsites([])
+      setFilteredWebsites([])
+      setTotal(0)
     } finally {
       setIsLoading(false)
     }
-  };
+  }
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-    setCurrentPage(1);
-  };
-  
+    setSearchQuery(e.target.value)
+    setCurrentPage(1)
+  }
+
   const executeSearch = () => {
-    setIsSearching(true);
-    setCurrentPage(1);
-    fetchWebsites();
-  };
-  
+    setIsSearching(true)
+    setCurrentPage(1)
+    fetchWebsites()
+  }
+
   const clearSearch = () => {
-    setSearchQuery("");
-    setIsSearching(false);
-    setCurrentPage(1);
-    fetchWebsites();
-  };
-  
+    setSearchQuery("")
+    setIsSearching(false)
+    setCurrentPage(1)
+    fetchWebsites()
+  }
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>, field: keyof Website) => {
     if (editedWebsite) {
       setEditedWebsite({
         ...editedWebsite,
-        [field]: e.target.value
-      });
+        [field]: e.target.value,
+      })
     } else if (isAddingWebsite) {
       setNewWebsite({
         ...newWebsite,
-        [field]: e.target.value
-      });
+        [field]: e.target.value,
+      })
     }
-  };
+  }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'Images' | 'Logo') => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: "Images" | "Logo") => {
     if (e.target.files && e.target.files[0]) {
-      if (field === 'Images') {
+      if (field === "Images") {
         setImagesFile(e.target.files[0])
-        setExistingImagesUrl(null) 
+        setExistingImagesUrl(null)
       } else {
         setLogoFile(e.target.files[0])
-        setExistingLogoUrl(null) 
+        setExistingLogoUrl(null)
       }
     }
   }
@@ -212,19 +258,19 @@ export default function Dashboard() {
   const prevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1))
 
   const toggleTagManager = () => {
-    setActiveTagManager(activeTagManager ? null : editingWebsite || 'new')
+    setActiveTagManager(activeTagManager ? null : editingWebsite || "new")
   }
 
   const addTag = (newTag: string) => {
     if (editedWebsite) {
       setEditedWebsite({
         ...editedWebsite,
-        Tags: [...new Set([...editedWebsite.Tags, newTag])]
+        Tags: [...new Set([...editedWebsite.Tags, newTag])],
       })
     } else if (isAddingWebsite) {
       setNewWebsite({
         ...newWebsite,
-        Tags: [...new Set([...newWebsite.Tags, newTag])]
+        Tags: [...new Set([...newWebsite.Tags, newTag])],
       })
     }
   }
@@ -233,12 +279,12 @@ export default function Dashboard() {
     if (editedWebsite) {
       setEditedWebsite({
         ...editedWebsite,
-        Tags: editedWebsite.Tags.filter(tag => tag !== tagToRemove)
+        Tags: editedWebsite.Tags.filter((tag) => tag !== tagToRemove),
       })
     } else if (isAddingWebsite) {
       setNewWebsite({
         ...newWebsite,
-        Tags: newWebsite.Tags.filter(tag => tag !== tagToRemove)
+        Tags: newWebsite.Tags.filter((tag) => tag !== tagToRemove),
       })
     }
   }
@@ -258,239 +304,247 @@ export default function Dashboard() {
     }
   }
 
-  const addNotification = (message: string, type: 'success' | 'error') => {
+  const addNotification = (message: string, type: "success" | "error") => {
     const id = Date.now()
-    setNotifications(prev => [...prev, { id, message, type }])
+    setNotifications((prev) => [...prev, { id, message, type }])
     setTimeout(() => {
-      setNotifications(prev => prev.filter(notification => notification.id !== id))
+      setNotifications((prev) => prev.filter((notification) => notification.id !== id))
     }, 5000)
   }
 
   const updateWebsite = async () => {
     if (editedWebsite) {
       try {
-        const formData = new FormData();
-        formData.append('type', 'websites');
+        const formData = new FormData()
+        formData.append("type", "websites")
         Object.entries(editedWebsite).forEach(([key, value]) => {
           if (Array.isArray(value)) {
             value.forEach((item, index) => {
-              formData.append(`${key}[${index}]`, item);
-            });
+              formData.append(`${key}[${index}]`, item)
+            })
           } else if (value !== null && value !== undefined) {
-            formData.append(key, value.toString());
+            formData.append(key, value.toString())
           }
-        });
+        })
 
         if (imagesFile) {
-          formData.append('Images', imagesFile);
+          formData.append("Images", imagesFile)
         }
         if (logoFile) {
-          formData.append('Logo', logoFile);
+          formData.append("Logo", logoFile)
         }
 
-        const response = await fetch('/CMS/api/update', {
-          method: 'POST',
+        const response = await fetch("/CMS/api/update", {
+          method: "POST",
           body: formData,
-        });
+        })
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`HTTP error! status: ${response.status}`)
         }
 
-        const updatedWebsite = await response.json();
-        
+        const updatedWebsite = await response.json()
+
         if (updatedWebsite) {
-          setWebsites(prevWebsites => 
-            prevWebsites.map(w => w.id === updatedWebsite.id ? updatedWebsite : w)
-          );
-          setFilteredWebsites(prevFiltered => 
-            prevFiltered.map(w => w.id === updatedWebsite.id ? updatedWebsite : w)
-          );
-          setEditingWebsite(null);
-          setEditedWebsite(null);
-          setActiveTagManager(null);
-          setImagesFile(null);
-          setLogoFile(null);
-          addNotification("The website has been successfully updated.", "success");
+          setWebsites((prevWebsites) => prevWebsites.map((w) => (w.id === updatedWebsite.id ? updatedWebsite : w)))
+          setFilteredWebsites((prevFiltered) =>
+            prevFiltered.map((w) => (w.id === updatedWebsite.id ? updatedWebsite : w)),
+          )
+          setEditingWebsite(null)
+          setEditedWebsite(null)
+          setActiveTagManager(null)
+          setImagesFile(null)
+          setLogoFile(null)
+          addNotification("The website has been successfully updated.", "success")
         } else {
-          throw new Error('Failed to update website');
+          throw new Error("Failed to update website")
         }
       } catch (error) {
-        console.error('Error updating website:', error);
-        addNotification("There was an error updating the website. Please try again.", "error");
+        console.error("Error updating website:", error)
+        addNotification("There was an error updating the website. Please try again.", "error")
       }
     }
-  };
+  }
 
   const addWebsite = async () => {
     try {
-      const formData = new FormData();
-      formData.append('type', 'websites');
+      const formData = new FormData()
+      formData.append("type", "websites")
       Object.entries(newWebsite).forEach(([key, value]) => {
         if (Array.isArray(value)) {
           value.forEach((item, index) => {
-            formData.append(`${key}[${index}]`, item);
-          });
+            formData.append(`${key}[${index}]`, item)
+          })
         } else if (value !== null && value !== undefined) {
-          formData.append(key, value.toString());
+          formData.append(key, value.toString())
         }
-      });
+      })
 
       if (imagesFile) {
-        formData.append('Images', imagesFile);
+        formData.append("Images", imagesFile)
       }
       if (logoFile) {
-        formData.append('Logo', logoFile);
+        formData.append("Logo", logoFile)
       }
 
-      const response = await fetch('/CMS/api/update', {
-        method: 'POST',
+      const response = await fetch("/CMS/api/update", {
+        method: "POST",
         body: formData,
-      });
+      })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const addedWebsite = await response.json();
-      
+      const addedWebsite = await response.json()
+
       if (addedWebsite) {
-        setWebsites(prevWebsites => [...prevWebsites, addedWebsite]);
-        setFilteredWebsites(prevFiltered => [...prevFiltered, addedWebsite]);
-        setTotal(prevTotal => prevTotal + 1);
-        setIsAddingWebsite(false);
-        setImagesFile(null);
-        setLogoFile(null);
-        addNotification("The website has been successfully added.", "success");
+        setWebsites((prevWebsites) => [...prevWebsites, addedWebsite])
+        setFilteredWebsites((prevFiltered) => [...prevFiltered, addedWebsite])
+        setTotal((prevTotal) => prevTotal + 1)
+        setIsAddingWebsite(false)
+        setImagesFile(null)
+        setLogoFile(null)
+        addNotification("The website has been successfully added.", "success")
       } else {
-        throw new Error('Failed to add website');
+        throw new Error("Failed to add website")
       }
     } catch (error) {
-      console.error('Error adding website:', error);
-      addNotification("There was an error adding the website. Please try again.", "error");
+      console.error("Error adding website:", error)
+      addNotification("There was an error adding the website. Please try again.", "error")
     }
-  };
+  }
 
   const toggleArchive = async (websiteId: string) => {
-    const websiteToUpdate = websites.find(w => w.id === websiteId);
+    const websiteToUpdate = websites.find((w) => w.id === websiteId)
     if (websiteToUpdate) {
       try {
-        const formData = new FormData();
-        formData.append('type', 'websites');
-        formData.append('id', websiteId);
-        formData.append('archive', (!websiteToUpdate.archive).toString());
+        const formData = new FormData()
+        formData.append("type", "websites")
+        formData.append("id", websiteId)
+        formData.append("archive", (!websiteToUpdate.archive).toString())
 
-        const response = await fetch('/CMS/api/update', {
-          method: 'POST',
+        const response = await fetch("/CMS/api/update", {
+          method: "POST",
           body: formData,
-        });
-  
+        })
+
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`HTTP error! status: ${response.status}`)
         }
 
-        const updatedWebsite = await response.json();
-        
+        const updatedWebsite = await response.json()
+
         if (updatedWebsite) {
-          setWebsites(prevWebsites => 
-            prevWebsites.map(website => website.id === updatedWebsite.id ? updatedWebsite : website)
-          );
-          setFilteredWebsites(prevFiltered => 
-            prevFiltered.map(website => website.id === updatedWebsite.id ? updatedWebsite : website)
-          );
-          addNotification(`The website has been ${updatedWebsite.archive ? 'archived' : 'unarchived'} successfully.`, "success");
+          setWebsites((prevWebsites) =>
+            prevWebsites.map((website) => (website.id === updatedWebsite.id ? updatedWebsite : website)),
+          )
+          setFilteredWebsites((prevFiltered) =>
+            prevFiltered.map((website) => (website.id === updatedWebsite.id ? updatedWebsite : website)),
+          )
+          addNotification(
+            `The website has been ${updatedWebsite.archive ? "archived" : "unarchived"} successfully.`,
+            "success",
+          )
         } else {
-          throw new Error('Failed to update archive status');
+          throw new Error("Failed to update archive status")
         }
       } catch (error) {
-        console.error('Error updating archive status:', error);
-        addNotification("There was an error updating the website. Please try again.", "error");
+        console.error("Error updating archive status:", error)
+        addNotification("There was an error updating the website. Please try again.", "error")
       }
     }
-  };
+  }
 
   const toggleHighlight = async (websiteId: string) => {
-    const websiteToUpdate = websites.find(w => w.id === websiteId);
+    const websiteToUpdate = websites.find((w) => w.id === websiteId)
     if (websiteToUpdate) {
       try {
-        const updatedWebsites = websites.map(website =>
-          website.id === websiteId ? { ...website, highlighted: !website.highlighted } : website
-        );
-        setWebsites(updatedWebsites);
-        setFilteredWebsites(updatedWebsites);
-  
-        const formData = new FormData();
-        formData.append('type', 'websites');
-        formData.append('id', websiteId);
-        formData.append('highlighted', (!websiteToUpdate.highlighted).toString());
-  
-        const response = await fetch('/CMS/api/update', {
-          method: 'POST',
+        const updatedWebsites = websites.map((website) =>
+          website.id === websiteId ? { ...website, highlighted: !website.highlighted } : website,
+        )
+        setWebsites(updatedWebsites)
+        setFilteredWebsites(updatedWebsites)
+
+        const formData = new FormData()
+        formData.append("type", "websites")
+        formData.append("id", websiteId)
+        formData.append("highlighted", (!websiteToUpdate.highlighted).toString())
+
+        const response = await fetch("/CMS/api/update", {
+          method: "POST",
           body: formData,
-        });
-  
-        const updatedWebsite = await response.json();
-        
+        })
+
+        const updatedWebsite = await response.json()
+
         if (updatedWebsite) {
-          addNotification(`The website has been ${updatedWebsite.highlighted ? 'highlighted' : 'unhighlighted'} successfully.`, "success");
+          addNotification(
+            `The website has been ${updatedWebsite.highlighted ? "highlighted" : "unhighlighted"} successfully.`,
+            "success",
+          )
         } else {
-          setWebsites(websites);
-          setFilteredWebsites(websites);
-          throw new Error('Failed to update highlight status');
+          setWebsites(websites)
+          setFilteredWebsites(websites)
+          throw new Error("Failed to update highlight status")
         }
       } catch (error) {
-        console.error('Error updating highlight status:', error);
-        addNotification("There was an error updating the website. Please try again.", "error");
+        console.error("Error updating highlight status:", error)
+        addNotification("There was an error updating the website. Please try again.", "error")
       }
     }
-  };
+  }
 
   const deleteWebsite = async (websiteId: string) => {
     try {
       const response = await fetch(`/CMS/api/update?id=${websiteId}&type=websites`, {
-        method: 'DELETE',
-      });
+        method: "DELETE",
+      })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const result = await response.json();
-      
+      const result = await response.json()
+
       if (result.success) {
-        setWebsites(prevWebsites => prevWebsites.filter(w => w.id !== websiteId));
-        setFilteredWebsites(prevFiltered => prevFiltered.filter(w => w.id !== websiteId));
-        setTotal(prevTotal => prevTotal - 1);
-        addNotification("The website has been successfully deleted.", "success");
+        setWebsites((prevWebsites) => prevWebsites.filter((w) => w.id !== websiteId))
+        setFilteredWebsites((prevFiltered) => prevFiltered.filter((w) => w.id !== websiteId))
+        setTotal((prevTotal) => prevTotal - 1)
+        addNotification("The website has been successfully deleted.", "success")
       } else {
-        throw new Error('Failed to delete website');
+        throw new Error("Failed to delete website")
       }
     } catch (error) {
-      console.error('Error deleting website:', error);
-      addNotification("There was an error deleting the website. Please try again.", "error");
+      console.error("Error deleting website:", error)
+      addNotification("There was an error deleting the website. Please try again.", "error")
     }
-  };
+  }
 
   const exportWebsites = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "ID,Title,Description,Status,URL,Tags,Last Updated,Archived,Images,Logo\n"
-      + filteredWebsites.map(website => 
-          `${website.id},"${website.Title}","${website.Description}",${website.Status},${website.URL},"${website.Tags.join(', ')}",${website.Content_Update_Date},${website.archive},${website.Images},${website.Logo}`
-        ).join("\n");
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      "ID,Title,Description,Status,URL,Tags,Last Updated,Archived,Images,Logo\n" +
+      filteredWebsites
+        .map(
+          (website) =>
+            `${website.id},"${website.Title}","${website.Description}",${website.Status},${website.URL},"${website.Tags.join(", ")}",${website.Content_Update_Date},${website.archive},${website.Images},${website.Logo}`,
+        )
+        .join("\n")
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "websites_export.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", "websites_export.csv")
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   const getTagColor = (tag: string) => {
-    const tagGroup = allTags.find(group => group.tags.includes(tag));
-    return tagGroup ? tagGroup.color : 'hsl(0, 0%, 50%)';
-  };
+    const tagGroup = allTags.find((group) => group.tags.includes(tag))
+    return tagGroup ? tagGroup.color : "hsl(0, 0%, 50%)"
+  }
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -506,8 +560,8 @@ export default function Dashboard() {
                 onChange={handleSearch}
               />
               <div className="absolute inset-y-0 right-0 flex items-center">
-                <button 
-                  className="h-full px-2 text-gray-400 hover:text-gray-600" 
+                <button
+                  className="h-full px-2 text-gray-400 hover:text-gray-600"
                   onClick={executeSearch}
                   aria-label="Search"
                 >
@@ -534,27 +588,21 @@ export default function Dashboard() {
                 className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-neutral-300 hover:bg-accent hover:text-accent-foreground h-8 px-3 gap-1"
               >
                 <File className="h-3.5 w-3.5" />
-                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                  Export
-                </span>
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Export</span>
               </button>
-              <button 
+              <button
                 onClick={() => setIsAddingWebsite(true)}
                 className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3 gap-1"
               >
                 <PlusCircle className="h-3.5 w-3.5" />
-                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                  Add Website
-                </span>
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Add Website</span>
               </button>
             </div>
           </div>
           <Card>
             <CardHeader>
               <CardTitle>Websites</CardTitle>
-              <CardDescription>
-                Manage your websites and view their status.
-              </CardDescription>
+              <CardDescription>Manage your websites and view their status.</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -591,7 +639,7 @@ export default function Dashboard() {
                         <TableCell>
                           {website.Images && (
                             <Image
-                              src={getImageUrl(website.Images)}
+                              src={getImageUrl(website.Images) || "/placeholder.svg"}
                               alt={`${website.Title} thumbnail`}
                               width={50}
                               height={50}
@@ -600,9 +648,7 @@ export default function Dashboard() {
                           )}
                         </TableCell>
                         <TableCell className="max-w-md">
-                          <div className="line-clamp-3 overflow-hidden text-ellipsis">
-                            {website.Description}
-                          </div>
+                          <div className="line-clamp-3 overflow-hidden text-ellipsis">{website.Description}</div>
                         </TableCell>
                         <TableCell onSelect={(e) => e.preventDefault()}>
                           <label className="flex items-center cursor-pointer">
@@ -613,12 +659,14 @@ export default function Dashboard() {
                                 checked={website.archive}
                                 onChange={() => toggleArchive(website.id)}
                               />
-                              <div className={`block w-8 h-4 rounded-full ${website.archive ? 'bg-primary' : 'bg-gray-300'}`}></div>
-                              <div className={`dot absolute left-1 top-1 bg-white w-2 h-2 rounded-full transition ${website.archive ? 'transform translate-x-4' : ''}`}></div>
+                              <div
+                                className={`block w-8 h-4 rounded-full ${website.archive ? "bg-primary" : "bg-gray-300"}`}
+                              ></div>
+                              <div
+                                className={`dot absolute left-1 top-1 bg-white w-2 h-2 rounded-full transition ${website.archive ? "transform translate-x-4" : ""}`}
+                              ></div>
                             </div>
-                            <div className="ml-3 text-sm font-medium">
-                              {website.archive ? 'Unarchive' : 'Archive'}
-                            </div>
+                            <div className="ml-3 text-sm font-medium">{website.archive ? "Unarchive" : "Archive"}</div>
                           </label>
                         </TableCell>
                         <TableCell>
@@ -633,9 +681,9 @@ export default function Dashboard() {
                           <div className="flex flex-wrap gap-1">
                             {website.Tags && website.Tags.length > 0 ? (
                               website.Tags.map((tag, index) => (
-                                <span 
-                                  key={index} 
-                                  className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" 
+                                <span
+                                  key={index}
+                                  className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
                                   style={{
                                     backgroundColor: `color-mix(in srgb, ${getTagColor(tag)} 25%, white)`,
                                     color: getTagColor(tag),
@@ -666,7 +714,10 @@ export default function Dashboard() {
                               <DropdownMenuItem onClick={() => toggleEdit(website)} className="items-center">
                                 Edit
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => deleteWebsite(website.id)} className="items-center text-red-600">
+                              <DropdownMenuItem
+                                onClick={() => deleteWebsite(website.id)}
+                                className="items-center text-red-600"
+                              >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Delete
                               </DropdownMenuItem>
@@ -677,10 +728,10 @@ export default function Dashboard() {
                           <button
                             onClick={() => toggleHighlight(website.id)}
                             className={`p-1 rounded-full ${
-                              website.highlighted ? 'text-yellow-500' : 'text-gray-300'
+                              website.highlighted ? "text-yellow-500" : "text-gray-300"
                             } hover:text-yellow-500 transition-colors`}
                           >
-                            <Star className="h-5 w-5" fill={website.highlighted ? 'currentColor' : 'none'} />
+                            <Star className="h-5 w-5" fill={website.highlighted ? "currentColor" : "none"} />
                           </button>
                         </TableCell>
                       </TableRow>
@@ -697,7 +748,12 @@ export default function Dashboard() {
             </CardContent>
             <CardFooter className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                Showing <strong>{websites.length > 0 ? (currentPage - 1) * websitesPerPage + 1 : 0}-{Math.min(currentPage * websitesPerPage, total)}</strong> of <strong>{total}</strong> websites
+                Showing{" "}
+                <strong>
+                  {websites.length > 0 ? (currentPage - 1) * websitesPerPage + 1 : 0}-
+                  {Math.min(currentPage * websitesPerPage, total)}
+                </strong>{" "}
+                of <strong>{total}</strong> websites
               </div>
               <div className="flex items-center space-x-2">
                 <button
@@ -727,35 +783,41 @@ export default function Dashboard() {
             <h2 className="text-xl font-bold mb-4">{isAddingWebsite ? "Add Website" : "Edit Website"}</h2>
             <div className="space-y-4">
               <div>
-                <label htmlFor="title" className="block text-md font-semibold text-gray-700">Title</label>
+                <label htmlFor="title" className="block text-md font-semibold text-gray-700">
+                  Title
+                </label>
                 <Input
                   id="title"
-                  value={isAddingWebsite ? newWebsite.Title : editedWebsite?.Title ?? ''}
-                  onChange={(e) => handleInputChange(e, 'Title')}
+                  value={isAddingWebsite ? newWebsite.Title : (editedWebsite?.Title ?? "")}
+                  onChange={(e) => handleInputChange(e, "Title")}
                   className="mt-1"
                 />
               </div>
               <div>
-                <label htmlFor="description" className="block text-md font-semibold text-gray-700">Description</label>
+                <label htmlFor="description" className="block text-md font-semibold text-gray-700">
+                  Description
+                </label>
                 <Input
                   id="description"
-                  value={isAddingWebsite ? newWebsite.Description : editedWebsite?.Description ?? ''}
-                  onChange={(e) => handleInputChange(e, 'Description')}
+                  value={isAddingWebsite ? newWebsite.Description : (editedWebsite?.Description ?? "")}
+                  onChange={(e) => handleInputChange(e, "Description")}
                   className="mt-1"
                   style={{
-                    minHeight: '100px',
-                    height: 'auto',
-                    overflow: 'hidden',
-                    resize: 'none',
+                    minHeight: "100px",
+                    height: "auto",
+                    overflow: "hidden",
+                    resize: "none",
                   }}
                 />
               </div>
               <div>
-                <label htmlFor="status" className="block text-md font-semibold text-gray-700">Status</label>
+                <label htmlFor="status" className="block text-md font-semibold text-gray-700">
+                  Status
+                </label>
                 <select
                   id="status"
-                  value={isAddingWebsite ? newWebsite.Status : editedWebsite?.Status ?? ''}
-                  onChange={(e) => handleInputChange(e, 'Status')}
+                  value={isAddingWebsite ? newWebsite.Status : (editedWebsite?.Status ?? "")}
+                  onChange={(e) => handleInputChange(e, "Status")}
                   className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
                 >
                   <option value="Active">Active</option>
@@ -764,92 +826,113 @@ export default function Dashboard() {
                 </select>
               </div>
               <div>
-                <label htmlFor="url" className="block text-md font-semibold text-gray-700">URL</label>
+                <label htmlFor="url" className="block text-md font-semibold text-gray-700">
+                  URL
+                </label>
                 <Input
                   id="url"
-                  value={isAddingWebsite ? newWebsite.URL || '' : editedWebsite?.URL || ''}
-                  onChange={(e) => handleInputChange(e, 'URL')}
+                  value={isAddingWebsite ? newWebsite.URL || "" : editedWebsite?.URL || ""}
+                  onChange={(e) => handleInputChange(e, "URL")}
                   className="mt-1"
                 />
               </div>
               <div>
-                <label htmlFor="tags" className="block text-md font-semibold text-gray-700">Tags</label>
+                <label htmlFor="tags" className="block text-md font-semibold text-gray-700">
+                  Tags
+                </label>
                 <div className="mt-1 flex flex-wrap gap-2 cursor-pointer" onClick={toggleTagManager}>
-                  {(isAddingWebsite ? newWebsite.Tags : editedWebsite?.Tags ?? []).map((tag, index) => (
-                    <span 
-                        key={index} 
-                        className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" 
-                        style={{
-                          backgroundColor: `color-mix(in srgb, ${getTagColor(tag)} 25%, white)`,
-                          color: getTagColor(tag),
-                        }}
-                      >
-                        {tag}
-                      </span>
+                  {(isAddingWebsite ? newWebsite.Tags : (editedWebsite?.Tags ?? [])).map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                      style={{
+                        backgroundColor: `color-mix(in srgb, ${getTagColor(tag)} 25%, white)`,
+                        color: getTagColor(tag),
+                      }}
+                    >
+                      {tag}
+                    </span>
                   ))}
                 </div>
                 {activeTagManager === editingWebsite && (
                   <div className="mt-2 p-2 ">
-                    <div className="flex flex-col space-y-4">
-                      {allTags.map((tagGroup, index) => (
-                        <div key={tagGroup.title} className="pb-2 flex flex-col border border-dashed border-gray-200 rounded-md"> 
+                    {isLoadingTags ? (
+                      <div className="text-center text-sm text-muted-foreground">Loading tags...</div>
+                    ) : (
+                      <div className="flex flex-col space-y-4">
+                        {allTags.map((tagGroup, index) => (
+                          <div
+                            key={tagGroup.title}
+                            className="pb-2 flex flex-col border border-dashed border-gray-200 rounded-md"
+                          >
                             <h5 className={`text-${tagGroup.color}-600 text-md font-semibold mb-2`}>
                               {tagGroup.title}
                             </h5>
-                          <div className="flex flex-wrap gap-2 "> 
-                            {tagGroup.tags.map((tag) => (
-                              <span
-                                key={`${tagGroup.title}-${tag}`}
-                                className="cursor-pointer h-6 max-w-full flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full border hover:shadow-[3px_3px_0px_0px_rgba(0,0,0)] transition duration-200"
-                                style={{
-                                  backgroundColor: (isAddingWebsite ? newWebsite.Tags : editedWebsite?.Tags ?? []).includes(tag)
-                                    ? `color-mix(in srgb, ${tagGroup.color} 25%, white)`
-                                    : 'white',
-                                  color: tagGroup.color,
-                                  borderColor: tagGroup.color,
-                                }}
-                                
-                                onClick={() =>
-                                  (isAddingWebsite ? newWebsite.Tags : editedWebsite?.Tags ?? []).includes(tag) ? removeTag(tag) : addTag(tag)
-                                }
-                              >
-                                {tag}
-                                {(isAddingWebsite ? newWebsite.Tags : editedWebsite?.Tags ?? []).includes(tag) && (
-                                  <X
-                                    className="ml-1 h-3 w-3"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      removeTag(tag);
-                                    }}
-                                  />
-                                )}
-                              </span>
-                            ))}
+                            <div className="flex flex-wrap gap-2 ">
+                              {tagGroup.tags.map((tag) => (
+                                <span
+                                  key={`${tagGroup.title}-${tag}`}
+                                  className="cursor-pointer h-6 max-w-full flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full border hover:shadow-[3px_3px_0px_0px_rgba(0,0,0)] transition duration-200"
+                                  style={{
+                                    backgroundColor: (isAddingWebsite
+                                      ? newWebsite.Tags
+                                      : (editedWebsite?.Tags ?? [])
+                                    ).includes(tag)
+                                      ? `color-mix(in srgb, ${tagGroup.color} 25%, white)`
+                                      : "white",
+                                    color: tagGroup.color,
+                                    borderColor: tagGroup.color,
+                                  }}
+                                  onClick={() =>
+                                    (isAddingWebsite ? newWebsite.Tags : (editedWebsite?.Tags ?? [])).includes(tag)
+                                      ? removeTag(tag)
+                                      : addTag(tag)
+                                  }
+                                >
+                                  {tag}
+                                  {(isAddingWebsite ? newWebsite.Tags : (editedWebsite?.Tags ?? [])).includes(tag) && (
+                                    <X
+                                      className="ml-1 h-3 w-3"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        removeTag(tag)
+                                      }}
+                                    />
+                                  )}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
               <div>
-                <label htmlFor="lastUpdated" className="block text-sm font-medium text-gray-700">Last Updated</label>
+                <label htmlFor="lastUpdated" className="block text-sm font-medium text-gray-700">
+                  Last Updated
+                </label>
                 <Input
                   id="lastUpdated"
                   type="date"
-                  value={isAddingWebsite ? newWebsite.Content_Update_Date || '' : editedWebsite?.Content_Update_Date || ''}
-                  onChange={(e) => handleInputChange(e, 'Content_Update_Date')}
+                  value={
+                    isAddingWebsite ? newWebsite.Content_Update_Date || "" : editedWebsite?.Content_Update_Date || ""
+                  }
+                  onChange={(e) => handleInputChange(e, "Content_Update_Date")}
                   className="mt-1"
                 />
               </div>
               <div>
-                <label htmlFor="images" className="block text-md font-semibold text-gray-700">Images</label>
+                <label htmlFor="images" className="block text-md font-semibold text-gray-700">
+                  Images
+                </label>
                 <div className="mt-1 flex items-center">
                   <input
                     id="images"
                     type="file"
                     accept="image/*"
-                    onChange={(e) => handleFileChange(e, 'Images')}
+                    onChange={(e) => handleFileChange(e, "Images")}
                     className="hidden"
                   />
                   <label
@@ -863,9 +946,9 @@ export default function Dashboard() {
                   {!imagesFile && existingImagesUrl && (
                     <div className="ml-2 flex items-center">
                       <div className="relative w-12 h-12">
-                        <Image 
-                          src={getImageUrl(existingImagesUrl)}
-                          alt="Existing image" 
+                        <Image
+                          src={getImageUrl(existingImagesUrl) || "/placeholder.svg"}
+                          alt="Existing image"
                           width={48}
                           height={48}
                           className="object-cover rounded-md"
@@ -877,13 +960,15 @@ export default function Dashboard() {
                 </div>
               </div>
               <div>
-                <label htmlFor="logo" className="block text-md font-semibold text-gray-700">Logo</label>
+                <label htmlFor="logo" className="block text-md font-semibold text-gray-700">
+                  Logo
+                </label>
                 <div className="mt-1 flex items-center">
                   <input
                     id="logo"
                     type="file"
                     accept="image/*"
-                    onChange={(e) => handleFileChange(e, 'Logo')}
+                    onChange={(e) => handleFileChange(e, "Logo")}
                     className="hidden"
                   />
                   <label
@@ -897,9 +982,9 @@ export default function Dashboard() {
                   {!logoFile && existingLogoUrl && (
                     <div className="ml-2 flex items-center">
                       <div className="relative w-12 h-12">
-                        <Image 
-                          src={getImageUrl(existingLogoUrl)}
-                          alt="Existing logo" 
+                        <Image
+                          src={getImageUrl(existingLogoUrl) || "/placeholder.svg"}
+                          alt="Existing logo"
                           width={48}
                           height={48}
                           className="object-cover rounded-md"
@@ -942,7 +1027,7 @@ export default function Dashboard() {
           <div
             key={notification.id}
             className={`mb-2 p-4 rounded-md ${
-              notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+              notification.type === "success" ? "bg-green-500" : "bg-red-500"
             } text-white`}
           >
             {notification.message}
@@ -954,4 +1039,3 @@ export default function Dashboard() {
     </div>
   )
 }
-
