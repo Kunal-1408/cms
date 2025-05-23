@@ -1,5 +1,7 @@
 "use client"
 
+import { TableHeader } from "@/components/ui/table"
+
 import type React from "react"
 
 import { useEffect, useRef, useState } from "react"
@@ -23,6 +25,15 @@ import {
   LinkIcon,
 } from "lucide-react"
 
+const togglerStyles = {
+  button: `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`,
+  activeTrack: `bg-indigo-600`,
+  inactiveTrack: `bg-gray-200`,
+  knob: `inline-block h-4 w-4 transform rounded-full bg-white transition-transform`,
+  activeKnob: `translate-x-6`,
+  inactiveKnob: `translate-x-1`,
+}
+
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   DropdownMenu,
@@ -32,18 +43,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
-const togglerStyles = {
-  button: `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`,
-  activeTrack: `bg-indigo-600`,
-  inactiveTrack: `bg-gray-200`,
-  knob: `inline-block h-4 w-4 transform rounded-full bg-white transition-transform`,
-  activeKnob: `translate-x-6`,
-  inactiveKnob: `translate-x-1`,
-}
 
 const getImageUrl = (path: string | null) => {
   if (!path) return "/placeholder.svg?height=50&width=50"
@@ -134,15 +136,6 @@ interface Notification {
   type: "success" | "error"
 }
 
-interface FileState {
-  logoFile: File | null
-  bannerFiles: File[]
-  campaignFiles: { campaignIndex: number; files: File[] }[]
-  existingLogoUrl: string | null
-  existingBannerUrls: string[]
-  existingCampaignUrls: { campaignIndex: number; urls: string[] }[]
-}
-
 export default function SocialDashboard() {
   const [activeTagManager, setActiveTagManager] = useState<string | null>(null)
   const [editingSocial, setEditingSocial] = useState<string | null>(null)
@@ -152,6 +145,7 @@ export default function SocialDashboard() {
   const [filteredSocials, setFilteredSocials] = useState<Social[]>([])
   const [total, setTotal] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
+  const [highlightedCount, setHighlightedCount] = useState(0)
   const [isAddingSocial, setIsAddingSocial] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearching, setIsSearching] = useState(false)
@@ -160,15 +154,27 @@ export default function SocialDashboard() {
   const [error, setError] = useState<string | null>(null)
   const socialsPerPage = 10
 
-  // Unified file state
-  const [fileState, setFileState] = useState<FileState>({
-    logoFile: null,
-    bannerFiles: [],
-    campaignFiles: [],
-    existingLogoUrl: null,
-    existingBannerUrls: [],
-    existingCampaignUrls: [],
-  })
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [bannerFiles, setBannerFiles] = useState<File[]>([])
+  const [campaignFiles, setCampaignFiles] = useState<{ campaignIndex: number; files: File[] }[]>([])
+
+  const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null)
+  const [existingBannerUrls, setExistingBannerUrls] = useState<string[]>([])
+  const [existingCampaignUrls, setExistingCampaignUrls] = useState<{ campaignIndex: number; urls: string[] }[]>([])
+
+  const allTags: TagGroup[] = [
+    {
+      title: "Platform",
+      tags: ["Instagram", "Twitter", "Facebook", "LinkedIn", "TikTok"],
+      color: "hsl(221, 83%, 53%)",
+    },
+    { title: "Content Type", tags: ["Photos", "Videos", "Stories", "Reels", "Live"], color: "hsl(140, 71%, 45%)" },
+    {
+      title: "Campaign",
+      tags: ["Launch", "Awareness", "Engagement", "Conversion", "Seasonal"],
+      color: "hsl(291, 64%, 42%)",
+    },
+  ]
 
   const emptySocial: Social = {
     id: "",
@@ -202,22 +208,10 @@ export default function SocialDashboard() {
     highlighted: false,
   }
 
-  // Single state for new/edited social
   const [newSocial, setNewSocial] = useState<Social>(emptySocial)
-
-  const allTags: TagGroup[] = [
-    {
-      title: "Platform",
-      tags: ["Instagram", "Twitter", "Facebook", "LinkedIn", "TikTok"],
-      color: "hsl(221, 83%, 53%)",
-    },
-    { title: "Content Type", tags: ["Photos", "Videos", "Stories", "Reels", "Live"], color: "hsl(140, 71%, 45%)" },
-    {
-      title: "Campaign",
-      tags: ["Launch", "Awareness", "Engagement", "Conversion", "Seasonal"],
-      color: "hsl(291, 64%, 42%)",
-    },
-  ]
+  const [platforms, setPlatforms] = useState<SocialPlatform[]>([])
+  const [metrics, setMetrics] = useState<AnalyticsSection["metrics"]>([])
+  const [campaigns, setCampaigns] = useState<CampaignSection["campaigns"]>([])
 
   useEffect(() => {
     fetchSocials()
@@ -229,7 +223,6 @@ export default function SocialDashboard() {
         setEditingSocial(null)
         setEditedSocial(null)
         setIsAddingSocial(false)
-        resetFileStates()
       }
     }
 
@@ -297,219 +290,225 @@ export default function SocialDashboard() {
     fetchSocials()
   }
 
-  // Unified input change handler for all fields
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     field: string,
     section?: string,
     subfield?: string,
   ) => {
-    const currentSocial = editedSocial || newSocial
-    let updatedSocial = { ...currentSocial }
-
-    if (section && subfield) {
-      // Handle nested section field updates
-      updatedSocial = {
-        ...updatedSocial,
+    if (editedSocial && section && subfield) {
+      // Handle nested section field updates for existing sections
+      setEditedSocial({
+        ...editedSocial,
         [section]: {
-          ...updatedSocial[section as keyof Social],
+          ...editedSocial[section as keyof Social],
           [subfield]: e.target.value,
         },
-      }
-    } else {
+      })
+    } else if (editedSocial) {
       // Handle direct field updates
-      updatedSocial = {
-        ...updatedSocial,
+      setEditedSocial({
+        ...editedSocial,
         [field]: e.target.value,
-      }
-    }
-
-    if (editedSocial) {
-      setEditedSocial(updatedSocial)
-    } else {
-      setNewSocial(updatedSocial)
+      })
+    } else if (isAddingSocial && section && subfield) {
+      // Handle nested section field updates for new social
+      setNewSocial({
+        ...newSocial,
+        [section]: {
+          ...newSocial[section as keyof Social],
+          [subfield]: e.target.value,
+        },
+      })
+    } else if (isAddingSocial) {
+      // Handle direct field updates for new social
+      setNewSocial({
+        ...newSocial,
+        [field]: e.target.value,
+      })
     }
   }
 
   const handlePlatformChange = (index: number, field: keyof SocialPlatform, value: string | number) => {
-    const currentSocial = editedSocial || newSocial
-    const updatedPlatforms = [...currentSocial.socialMediaSection.platforms]
-
-    if (index >= updatedPlatforms.length) {
-      // Add new platform if index is out of bounds
-      updatedPlatforms[index] = { name: "", url: "", handle: "", [field]: value }
-    } else {
-      updatedPlatforms[index] = { ...updatedPlatforms[index], [field]: value }
-    }
-
-    const updatedSocial = {
-      ...currentSocial,
-      socialMediaSection: {
-        ...currentSocial.socialMediaSection,
-        platforms: updatedPlatforms,
-      },
-    }
-
     if (editedSocial) {
-      setEditedSocial(updatedSocial)
-    } else {
-      setNewSocial(updatedSocial)
+      const updatedPlatforms = [...platforms]
+      updatedPlatforms[index] = { ...updatedPlatforms[index], [field]: value }
+      setPlatforms(updatedPlatforms)
+
+      setEditedSocial({
+        ...editedSocial,
+        socialMediaSection: {
+          ...editedSocial.socialMediaSection,
+          platforms: updatedPlatforms,
+        },
+      })
+    } else if (isAddingSocial) {
+      const updatedPlatforms = [...platforms]
+      updatedPlatforms[index] = { ...updatedPlatforms[index], [field]: value }
+      setPlatforms(updatedPlatforms)
+
+      setNewSocial({
+        ...newSocial,
+        socialMediaSection: {
+          ...newSocial.socialMediaSection,
+          platforms: updatedPlatforms,
+        },
+      })
     }
   }
 
   const addPlatform = () => {
-    const currentSocial = editedSocial || newSocial
     const newPlatform: SocialPlatform = {
       name: "",
       url: "",
       handle: "",
     }
 
-    const updatedSocial = {
-      ...currentSocial,
-      socialMediaSection: {
-        ...currentSocial.socialMediaSection,
-        platforms: [...currentSocial.socialMediaSection.platforms, newPlatform],
-      },
-    }
+    const updatedPlatforms = [...platforms, newPlatform]
+    setPlatforms(updatedPlatforms)
 
     if (editedSocial) {
-      setEditedSocial(updatedSocial)
-    } else {
-      setNewSocial(updatedSocial)
+      setEditedSocial({
+        ...editedSocial,
+        socialMediaSection: {
+          ...editedSocial.socialMediaSection,
+          platforms: updatedPlatforms,
+        },
+      })
+    } else if (isAddingSocial) {
+      setNewSocial({
+        ...newSocial,
+        socialMediaSection: {
+          ...newSocial.socialMediaSection,
+          platforms: updatedPlatforms,
+        },
+      })
     }
   }
 
   const removePlatform = (index: number) => {
-    const currentSocial = editedSocial || newSocial
-    const updatedPlatforms = currentSocial.socialMediaSection.platforms.filter((_, i) => i !== index)
-
-    const updatedSocial = {
-      ...currentSocial,
-      socialMediaSection: {
-        ...currentSocial.socialMediaSection,
-        platforms: updatedPlatforms,
-      },
-    }
+    const updatedPlatforms = platforms.filter((_, i) => i !== index)
+    setPlatforms(updatedPlatforms)
 
     if (editedSocial) {
-      setEditedSocial(updatedSocial)
-    } else {
-      setNewSocial(updatedSocial)
+      setEditedSocial({
+        ...editedSocial,
+        socialMediaSection: {
+          ...editedSocial.socialMediaSection,
+          platforms: updatedPlatforms,
+        },
+      })
+    } else if (isAddingSocial) {
+      setNewSocial({
+        ...newSocial,
+        socialMediaSection: {
+          ...newSocial.socialMediaSection,
+          platforms: updatedPlatforms,
+        },
+      })
     }
   }
 
   const handleMetricChange = (index: number, field: string, value: string | number) => {
-    const currentSocial = editedSocial || newSocial
-    if (!currentSocial.analyticsSection) return
+    const updatedMetrics = [...metrics]
+    updatedMetrics[index] = { ...updatedMetrics[index], [field]: value }
+    setMetrics(updatedMetrics)
 
-    const updatedMetrics = [...currentSocial.analyticsSection.metrics]
-
-    if (index >= updatedMetrics.length) {
-      // Add new metric if index is out of bounds
-      updatedMetrics[index] = { name: "", value: "", [field]: value }
-    } else {
-      updatedMetrics[index] = { ...updatedMetrics[index], [field]: value }
-    }
-
-    const updatedSocial = {
-      ...currentSocial,
-      analyticsSection: {
-        ...currentSocial.analyticsSection,
-        metrics: updatedMetrics,
-      },
-    }
-
-    if (editedSocial) {
-      setEditedSocial(updatedSocial)
-    } else {
-      setNewSocial(updatedSocial)
+    if (editedSocial && editedSocial.analyticsSection) {
+      setEditedSocial({
+        ...editedSocial,
+        analyticsSection: {
+          ...editedSocial.analyticsSection,
+          metrics: updatedMetrics,
+        },
+      })
+    } else if (isAddingSocial) {
+      setNewSocial({
+        ...newSocial,
+        analyticsSection: {
+          ...newSocial.analyticsSection!,
+          metrics: updatedMetrics,
+        },
+      })
     }
   }
 
   const addMetric = () => {
-    const currentSocial = editedSocial || newSocial
-    if (!currentSocial.analyticsSection) return
-
     const newMetric = {
       name: "",
       value: "",
     }
 
-    const updatedSocial = {
-      ...currentSocial,
-      analyticsSection: {
-        ...currentSocial.analyticsSection,
-        metrics: [...currentSocial.analyticsSection.metrics, newMetric],
-      },
-    }
+    const updatedMetrics = [...metrics, newMetric]
+    setMetrics(updatedMetrics)
 
     if (editedSocial) {
-      setEditedSocial(updatedSocial)
-    } else {
-      setNewSocial(updatedSocial)
+      setEditedSocial({
+        ...editedSocial,
+        analyticsSection: {
+          ...editedSocial.analyticsSection!,
+          metrics: updatedMetrics,
+        },
+      })
+    } else if (isAddingSocial) {
+      setNewSocial({
+        ...newSocial,
+        analyticsSection: {
+          ...newSocial.analyticsSection!,
+          metrics: updatedMetrics,
+        },
+      })
     }
   }
 
   const removeMetric = (index: number) => {
-    const currentSocial = editedSocial || newSocial
-    if (!currentSocial.analyticsSection) return
+    const updatedMetrics = metrics.filter((_, i) => i !== index)
+    setMetrics(updatedMetrics)
 
-    const updatedMetrics = currentSocial.analyticsSection.metrics.filter((_, i) => i !== index)
-
-    const updatedSocial = {
-      ...currentSocial,
-      analyticsSection: {
-        ...currentSocial.analyticsSection,
-        metrics: updatedMetrics,
-      },
-    }
-
-    if (editedSocial) {
-      setEditedSocial(updatedSocial)
-    } else {
-      setNewSocial(updatedSocial)
+    if (editedSocial && editedSocial.analyticsSection) {
+      setEditedSocial({
+        ...editedSocial,
+        analyticsSection: {
+          ...editedSocial.analyticsSection,
+          metrics: updatedMetrics,
+        },
+      })
+    } else if (isAddingSocial && newSocial.analyticsSection) {
+      setNewSocial({
+        ...newSocial,
+        analyticsSection: {
+          ...newSocial.analyticsSection,
+          metrics: updatedMetrics,
+        },
+      })
     }
   }
 
   const handleCampaignChange = (index: number, field: string, value: string) => {
-    const currentSocial = editedSocial || newSocial
-    if (!currentSocial.campaignSection) return
+    const updatedCampaigns = [...campaigns]
+    updatedCampaigns[index] = { ...updatedCampaigns[index], [field]: value }
+    setCampaigns(updatedCampaigns)
 
-    const updatedCampaigns = [...currentSocial.campaignSection.campaigns]
-
-    if (index >= updatedCampaigns.length) {
-      // Add new campaign if index is out of bounds
-      updatedCampaigns[index] = {
-        name: "",
-        description: "",
-        status: "Planned",
-        images: [],
-        [field]: value,
-      }
-    } else {
-      updatedCampaigns[index] = { ...updatedCampaigns[index], [field]: value }
-    }
-
-    const updatedSocial = {
-      ...currentSocial,
-      campaignSection: {
-        ...currentSocial.campaignSection,
-        campaigns: updatedCampaigns,
-      },
-    }
-
-    if (editedSocial) {
-      setEditedSocial(updatedSocial)
-    } else {
-      setNewSocial(updatedSocial)
+    if (editedSocial && editedSocial.campaignSection) {
+      setEditedSocial({
+        ...editedSocial,
+        campaignSection: {
+          ...editedSocial.campaignSection,
+          campaigns: updatedCampaigns,
+        },
+      })
+    } else if (isAddingSocial && newSocial.campaignSection) {
+      setNewSocial({
+        ...newSocial,
+        campaignSection: {
+          ...newSocial.campaignSection,
+          campaigns: updatedCampaigns,
+        },
+      })
     }
   }
 
   const addCampaign = () => {
-    const currentSocial = editedSocial || newSocial
-    if (!currentSocial.campaignSection) return
-
     const newCampaign = {
       name: "",
       description: "",
@@ -517,39 +516,48 @@ export default function SocialDashboard() {
       images: [],
     }
 
-    const updatedSocial = {
-      ...currentSocial,
-      campaignSection: {
-        ...currentSocial.campaignSection,
-        campaigns: [...currentSocial.campaignSection.campaigns, newCampaign],
-      },
-    }
+    const updatedCampaigns = [...campaigns, newCampaign]
+    setCampaigns(updatedCampaigns)
 
     if (editedSocial) {
-      setEditedSocial(updatedSocial)
-    } else {
-      setNewSocial(updatedSocial)
+      setEditedSocial({
+        ...editedSocial,
+        campaignSection: {
+          ...editedSocial.campaignSection!,
+          campaigns: updatedCampaigns,
+        },
+      })
+    } else if (isAddingSocial) {
+      setNewSocial({
+        ...newSocial,
+        campaignSection: {
+          ...newSocial.campaignSection!,
+          campaigns: updatedCampaigns,
+        },
+      })
     }
   }
 
   const removeCampaign = (index: number) => {
-    const currentSocial = editedSocial || newSocial
-    if (!currentSocial.campaignSection) return
+    const updatedCampaigns = campaigns.filter((_, i) => i !== index)
+    setCampaigns(updatedCampaigns)
 
-    const updatedCampaigns = currentSocial.campaignSection.campaigns.filter((_, i) => i !== index)
-
-    const updatedSocial = {
-      ...currentSocial,
-      campaignSection: {
-        ...currentSocial.campaignSection,
-        campaigns: updatedCampaigns,
-      },
-    }
-
-    if (editedSocial) {
-      setEditedSocial(updatedSocial)
-    } else {
-      setNewSocial(updatedSocial)
+    if (editedSocial && editedSocial.campaignSection) {
+      setEditedSocial({
+        ...editedSocial,
+        campaignSection: {
+          ...editedSocial.campaignSection,
+          campaigns: updatedCampaigns,
+        },
+      })
+    } else if (isAddingSocial && newSocial.campaignSection) {
+      setNewSocial({
+        ...newSocial,
+        campaignSection: {
+          ...newSocial.campaignSection,
+          campaigns: updatedCampaigns,
+        },
+      })
     }
   }
 
@@ -558,107 +566,98 @@ export default function SocialDashboard() {
     section: "logoSection" | "bannerSection" | "campaignSection",
     campaignIndex?: number,
   ) => {
-    if (!e.target.files) return
+    if (e.target.files) {
+      if (section === "logoSection") {
+        setLogoFile(e.target.files[0])
+        setExistingLogoUrl(null)
+      } else if (section === "bannerSection") {
+        const files = Array.from(e.target.files)
+        setBannerFiles((prev) => [...prev, ...files])
+      } else if (section === "campaignSection" && campaignIndex !== undefined) {
+        const files = Array.from(e.target.files)
+        setCampaignFiles((prev) => {
+          const existingCampaignIndex = prev.findIndex((item) => item.campaignIndex === campaignIndex)
 
-    const updatedFileState = { ...fileState }
-
-    if (section === "logoSection") {
-      updatedFileState.logoFile = e.target.files[0]
-      updatedFileState.existingLogoUrl = null
-    } else if (section === "bannerSection") {
-      const files = Array.from(e.target.files)
-      updatedFileState.bannerFiles = [...updatedFileState.bannerFiles, ...files]
-    } else if (section === "campaignSection" && campaignIndex !== undefined) {
-      const files = Array.from(e.target.files)
-      const existingCampaignIndex = updatedFileState.campaignFiles.findIndex(
-        (item) => item.campaignIndex === campaignIndex,
-      )
-
-      if (existingCampaignIndex >= 0) {
-        updatedFileState.campaignFiles[existingCampaignIndex] = {
-          campaignIndex,
-          files: [...updatedFileState.campaignFiles[existingCampaignIndex].files, ...files],
-        }
-      } else {
-        updatedFileState.campaignFiles.push({ campaignIndex, files })
+          if (existingCampaignIndex >= 0) {
+            const updated = [...prev]
+            updated[existingCampaignIndex] = {
+              campaignIndex,
+              files: [...updated[existingCampaignIndex].files, ...files],
+            }
+            return updated
+          } else {
+            return [...prev, { campaignIndex, files }]
+          }
+        })
       }
     }
-
-    setFileState(updatedFileState)
   }
 
   const removeFile = (section: "bannerSection" | "campaignSection", index: number, campaignIndex?: number) => {
-    const updatedFileState = { ...fileState }
-
     if (section === "bannerSection") {
-      updatedFileState.bannerFiles = updatedFileState.bannerFiles.filter((_, i) => i !== index)
+      setBannerFiles((prev) => prev.filter((_, i) => i !== index))
     } else if (section === "campaignSection" && campaignIndex !== undefined) {
-      const campaignFileIndex = updatedFileState.campaignFiles.findIndex((item) => item.campaignIndex === campaignIndex)
+      setCampaignFiles((prev) => {
+        const campaignFileIndex = prev.findIndex((item) => item.campaignIndex === campaignIndex)
 
-      if (campaignFileIndex >= 0) {
-        updatedFileState.campaignFiles[campaignFileIndex] = {
-          campaignIndex,
-          files: updatedFileState.campaignFiles[campaignFileIndex].files.filter((_, i) => i !== index),
+        if (campaignFileIndex >= 0) {
+          const updated = [...prev]
+          updated[campaignFileIndex] = {
+            campaignIndex,
+            files: updated[campaignFileIndex].files.filter((_, i) => i !== index),
+          }
+          return updated
         }
-      }
-    }
 
-    setFileState(updatedFileState)
+        return prev
+      })
+    }
   }
 
   const removeExistingFile = (section: "bannerSection" | "campaignSection", index: number, campaignIndex?: number) => {
-    const updatedFileState = { ...fileState }
-    const currentSocial = editedSocial || newSocial
-    let updatedSocial = { ...currentSocial }
-
     if (section === "bannerSection") {
-      updatedFileState.existingBannerUrls = updatedFileState.existingBannerUrls.filter((_, i) => i !== index)
-
-      if (updatedSocial.bannerSection) {
-        const updatedBanners = [...updatedSocial.bannerSection.banners]
+      setExistingBannerUrls((prev) => prev.filter((_, i) => i !== index))
+      if (editedSocial) {
+        const updatedBanners = [...editedSocial.bannerSection.banners]
         updatedBanners.splice(index, 1)
-        updatedSocial = {
-          ...updatedSocial,
+        setEditedSocial({
+          ...editedSocial,
           bannerSection: {
-            ...updatedSocial.bannerSection,
+            ...editedSocial.bannerSection,
             banners: updatedBanners,
           },
-        }
+        })
       }
     } else if (section === "campaignSection" && campaignIndex !== undefined) {
-      const campaignUrlIndex = updatedFileState.existingCampaignUrls.findIndex(
-        (item) => item.campaignIndex === campaignIndex,
-      )
+      setExistingCampaignUrls((prev) => {
+        const campaignUrlIndex = prev.findIndex((item) => item.campaignIndex === campaignIndex)
 
-      if (campaignUrlIndex >= 0) {
-        const filteredUrls = updatedFileState.existingCampaignUrls[campaignUrlIndex].urls.filter((_, i) => i !== index)
-        updatedFileState.existingCampaignUrls[campaignUrlIndex] = {
-          campaignIndex,
-          urls: filteredUrls,
+        if (campaignUrlIndex >= 0) {
+          const updated = [...prev]
+          const filteredUrls = updated[campaignUrlIndex].urls.filter((_, i) => i !== index)
+          updated[campaignUrlIndex] = {
+            campaignIndex,
+            urls: filteredUrls,
+          }
+          return updated
         }
-      }
 
-      if (updatedSocial.campaignSection && updatedSocial.campaignSection.campaigns[campaignIndex]) {
-        const updatedCampaigns = [...updatedSocial.campaignSection.campaigns]
-        if (updatedCampaigns[campaignIndex].images) {
+        return prev
+      })
+
+      if (editedSocial && editedSocial.campaignSection) {
+        const updatedCampaigns = [...editedSocial.campaignSection.campaigns]
+        if (updatedCampaigns[campaignIndex] && updatedCampaigns[campaignIndex].images) {
           updatedCampaigns[campaignIndex].images.splice(index, 1)
-          updatedSocial = {
-            ...updatedSocial,
+          setEditedSocial({
+            ...editedSocial,
             campaignSection: {
-              ...updatedSocial.campaignSection,
+              ...editedSocial.campaignSection,
               campaigns: updatedCampaigns,
             },
-          }
+          })
         }
       }
-    }
-
-    setFileState(updatedFileState)
-
-    if (editedSocial) {
-      setEditedSocial(updatedSocial)
-    } else {
-      setNewSocial(updatedSocial)
     }
   }
 
@@ -672,30 +671,30 @@ export default function SocialDashboard() {
   }
 
   const addTag = (newTag: string) => {
-    const currentSocial = editedSocial || newSocial
-    const updatedSocial = {
-      ...currentSocial,
-      tags: [...new Set([...currentSocial.tags, newTag])],
-    }
-
     if (editedSocial) {
-      setEditedSocial(updatedSocial)
-    } else {
-      setNewSocial(updatedSocial)
+      setEditedSocial({
+        ...editedSocial,
+        tags: [...new Set([...editedSocial.tags, newTag])],
+      })
+    } else if (isAddingSocial) {
+      setNewSocial({
+        ...newSocial,
+        tags: [...new Set([...newSocial.tags, newTag])],
+      })
     }
   }
 
   const removeTag = (tagToRemove: string) => {
-    const currentSocial = editedSocial || newSocial
-    const updatedSocial = {
-      ...currentSocial,
-      tags: currentSocial.tags.filter((tag) => tag !== tagToRemove),
-    }
-
     if (editedSocial) {
-      setEditedSocial(updatedSocial)
-    } else {
-      setNewSocial(updatedSocial)
+      setEditedSocial({
+        ...editedSocial,
+        tags: editedSocial.tags.filter((tag) => tag !== tagToRemove),
+      })
+    } else if (isAddingSocial) {
+      setNewSocial({
+        ...newSocial,
+        tags: newSocial.tags.filter((tag) => tag !== tagToRemove),
+      })
     }
   }
 
@@ -709,34 +708,39 @@ export default function SocialDashboard() {
       setEditingSocial(social.id)
       setEditedSocial(social)
 
-      // Set existing image URLs in the file state
-      setFileState({
-        logoFile: null,
-        bannerFiles: [],
-        campaignFiles: [],
-        existingLogoUrl: getImageUrl(social.logoSection.logo),
-        existingBannerUrls: social.bannerSection.banners,
-        existingCampaignUrls: social.campaignSection?.campaigns
-          ? social.campaignSection.campaigns
-              .map((campaign, index) => ({
-                campaignIndex: index,
-                urls: campaign.images || [],
-              }))
-              .filter((item) => item.urls.length > 0)
-          : [],
-      })
+      // Set existing image URLs
+      setExistingLogoUrl(getImageUrl(social.logoSection.logo))
+      setExistingBannerUrls(social.bannerSection.banners)
+
+      // Set platforms, metrics, and campaigns
+      setPlatforms(social.socialMediaSection?.platforms || [])
+      setMetrics(social.analyticsSection?.metrics || [])
+      setCampaigns(social.campaignSection?.campaigns || [])
+
+      // Set existing campaign image URLs
+      if (social.campaignSection && social.campaignSection.campaigns) {
+        const campaignUrls = social.campaignSection.campaigns
+          .map((campaign, index) => ({
+            campaignIndex: index,
+            urls: campaign.images || [],
+          }))
+          .filter((item) => item.urls.length > 0)
+
+        setExistingCampaignUrls(campaignUrls)
+      }
     }
   }
 
   const resetFileStates = () => {
-    setFileState({
-      logoFile: null,
-      bannerFiles: [],
-      campaignFiles: [],
-      existingLogoUrl: null,
-      existingBannerUrls: [],
-      existingCampaignUrls: [],
-    })
+    setLogoFile(null)
+    setBannerFiles([])
+    setCampaignFiles([])
+    setExistingLogoUrl(null)
+    setExistingBannerUrls([])
+    setExistingCampaignUrls([])
+    setPlatforms([])
+    setMetrics([])
+    setCampaigns([])
   }
 
   const addNotification = (message: string, type: "success" | "error") => {
@@ -778,15 +782,15 @@ export default function SocialDashboard() {
         }
 
         // Append files
-        if (fileState.logoFile) {
-          formData.append("logoFile", fileState.logoFile)
+        if (logoFile) {
+          formData.append("logoFile", logoFile)
         }
 
-        fileState.bannerFiles.forEach((file, index) => {
+        bannerFiles.forEach((file, index) => {
           formData.append(`bannerFile_${index}`, file)
         })
 
-        fileState.campaignFiles.forEach((campaignFile) => {
+        campaignFiles.forEach((campaignFile) => {
           campaignFile.files.forEach((file, fileIndex) => {
             formData.append(`campaignFile_${campaignFile.campaignIndex}_${fileIndex}`, file)
           })
@@ -852,15 +856,15 @@ export default function SocialDashboard() {
       }
 
       // Append files
-      if (fileState.logoFile) {
-        formData.append("logoFile", fileState.logoFile)
+      if (logoFile) {
+        formData.append("logoFile", logoFile)
       }
 
-      fileState.bannerFiles.forEach((file, index) => {
+      bannerFiles.forEach((file, index) => {
         formData.append(`bannerFile_${index}`, file)
       })
 
-      fileState.campaignFiles.forEach((campaignFile) => {
+      campaignFiles.forEach((campaignFile) => {
         campaignFile.files.forEach((file, fileIndex) => {
           formData.append(`campaignFile_${campaignFile.campaignIndex}_${fileIndex}`, file)
         })
@@ -1071,9 +1075,6 @@ export default function SocialDashboard() {
     if (platformLower.includes("linkedin")) return <Linkedin className="h-4 w-4" />
     return <LinkIcon className="h-4 w-4" />
   }
-
-  // Get the current social being edited or added
-  const currentSocial = editedSocial || (isAddingSocial ? newSocial : null)
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
@@ -1329,7 +1330,7 @@ export default function SocialDashboard() {
           </Card>
         </main>
       </div>
-      {currentSocial && (editingSocial || isAddingSocial) ? (
+      {(editingSocial && editedSocial) || isAddingSocial ? (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div ref={popoverRef} className="bg-white rounded-lg p-6 w-[800px] max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">{isAddingSocial ? "Add Social Project" : "Edit Social Project"}</h2>
@@ -1350,7 +1351,7 @@ export default function SocialDashboard() {
                   </label>
                   <Input
                     id="title"
-                    value={currentSocial.title}
+                    value={isAddingSocial ? newSocial.title : (editedSocial?.title ?? "")}
                     onChange={(e) => handleInputChange(e, "title")}
                     className="mt-1"
                   />
@@ -1361,7 +1362,7 @@ export default function SocialDashboard() {
                   </label>
                   <Textarea
                     id="description"
-                    value={currentSocial.description}
+                    value={isAddingSocial ? newSocial.description : (editedSocial?.description ?? "")}
                     onChange={(e) => handleInputChange(e, "description")}
                     className="mt-1 min-h-[100px]"
                   />
@@ -1372,7 +1373,7 @@ export default function SocialDashboard() {
                   </label>
                   <Input
                     id="clientName"
-                    value={currentSocial.clientName || ""}
+                    value={isAddingSocial ? newSocial.clientName || "" : editedSocial?.clientName || ""}
                     onChange={(e) => handleInputChange(e, "clientName")}
                     className="mt-1"
                   />
@@ -1382,7 +1383,7 @@ export default function SocialDashboard() {
                     Tags
                   </label>
                   <div className="mt-1 flex flex-wrap gap-2 cursor-pointer">
-                    {currentSocial.tags.map((tag, index) => (
+                    {(isAddingSocial ? newSocial.tags : (editedSocial?.tags ?? [])).map((tag, index) => (
                       <span
                         key={index}
                         className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
@@ -1412,13 +1413,20 @@ export default function SocialDashboard() {
                                 key={`${tagGroup.title}-${tag}`}
                                 className="cursor-pointer h-6 max-w-full flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full border hover:shadow-[3px_3px_0px_0px_rgba(0,0,0)] transition duration-200"
                                 style={{
-                                  backgroundColor: currentSocial.tags.includes(tag)
+                                  backgroundColor: (isAddingSocial
+                                    ? newSocial.tags
+                                    : (editedSocial?.tags ?? [])
+                                  ).includes(tag)
                                     ? `color-mix(in srgb, ${tagGroup.color} 25%, white)`
                                     : "white",
                                   color: tagGroup.color,
                                   borderColor: tagGroup.color,
                                 }}
-                                onClick={() => (currentSocial.tags.includes(tag) ? removeTag(tag) : addTag(tag))}
+                                onClick={() =>
+                                  (isAddingSocial ? newSocial.tags : (editedSocial?.tags ?? [])).includes(tag)
+                                    ? removeTag(tag)
+                                    : addTag(tag)
+                                }
                               >
                                 {tag}
                               </span>
@@ -1438,7 +1446,9 @@ export default function SocialDashboard() {
                   </label>
                   <Textarea
                     id="logoDescription"
-                    value={currentSocial.logoSection.description}
+                    value={
+                      isAddingSocial ? newSocial.logoSection.description : (editedSocial?.logoSection.description ?? "")
+                    }
                     onChange={(e) => handleInputChange(e, "logoSection", "description")}
                     className="mt-1 min-h-[100px]"
                   />
@@ -1462,12 +1472,12 @@ export default function SocialDashboard() {
                       <Upload className="mr-2 h-4 w-4" />
                       Upload Logo
                     </label>
-                    {fileState.logoFile && <span className="ml-2">{fileState.logoFile.name}</span>}
-                    {!fileState.logoFile && fileState.existingLogoUrl && (
+                    {logoFile && <span className="ml-2">{logoFile.name}</span>}
+                    {!logoFile && existingLogoUrl && (
                       <div className="ml-2 flex items-center">
                         <div className="relative w-12 h-12">
                           <Image
-                            src={fileState.existingLogoUrl || "/placeholder.svg"}
+                            src={existingLogoUrl || "/placeholder.svg"}
                             alt="Existing logo"
                             width={48}
                             height={48}
@@ -1488,7 +1498,11 @@ export default function SocialDashboard() {
                   </label>
                   <Textarea
                     id="bannerDescription"
-                    value={currentSocial.bannerSection.description}
+                    value={
+                      isAddingSocial
+                        ? newSocial.bannerSection.description
+                        : (editedSocial?.bannerSection.description ?? "")
+                    }
                     onChange={(e) => handleInputChange(e, "bannerSection", "description")}
                     className="mt-1 min-h-[100px]"
                   />
@@ -1516,11 +1530,11 @@ export default function SocialDashboard() {
                   </div>
 
                   {/* Display existing banners */}
-                  {fileState.existingBannerUrls && fileState.existingBannerUrls.length > 0 && (
+                  {existingBannerUrls && existingBannerUrls.length > 0 && (
                     <div className="mt-4">
                       <h4 className="font-medium mb-2">Existing Banners</h4>
                       <div className="grid grid-cols-2 gap-4">
-                        {fileState.existingBannerUrls.map((url, index) => (
+                        {existingBannerUrls.map((url, index) => (
                           <div key={index} className="relative">
                             <Image
                               src={getImageUrl(url) || "/placeholder.svg"}
@@ -1542,11 +1556,11 @@ export default function SocialDashboard() {
                   )}
 
                   {/* Display newly added banners */}
-                  {fileState.bannerFiles && fileState.bannerFiles.length > 0 && (
+                  {bannerFiles && bannerFiles.length > 0 && (
                     <div className="mt-4">
                       <h4 className="font-medium mb-2">New Banners</h4>
                       <div className="grid grid-cols-2 gap-4">
-                        {fileState.bannerFiles.map((file, index) => (
+                        {bannerFiles.map((file, index) => (
                           <div key={index} className="relative">
                             <div className="p-4 border rounded-md flex items-center">
                               <File className="h-10 w-10 mr-2" />
@@ -1573,7 +1587,11 @@ export default function SocialDashboard() {
                   </label>
                   <Textarea
                     id="platformsDescription"
-                    value={currentSocial.socialMediaSection.description}
+                    value={
+                      isAddingSocial
+                        ? newSocial.socialMediaSection.description
+                        : (editedSocial?.socialMediaSection.description ?? "")
+                    }
                     onChange={(e) => handleInputChange(e, "socialMediaSection", "description")}
                     className="mt-1 min-h-[100px]"
                   />
@@ -1590,7 +1608,7 @@ export default function SocialDashboard() {
                     </button>
                   </div>
 
-                  {currentSocial.socialMediaSection.platforms.map((platform, index) => (
+                  {platforms.map((platform, index) => (
                     <div key={index} className="p-4 border rounded-lg space-y-3">
                       <div className="flex justify-between">
                         <h4 className="font-medium">Platform {index + 1}</h4>
@@ -1665,7 +1683,7 @@ export default function SocialDashboard() {
                     </div>
                   ))}
 
-                  {currentSocial.socialMediaSection.platforms.length === 0 && (
+                  {platforms.length === 0 && (
                     <div className="text-center py-4 text-gray-500">
                       No platforms added yet. Click "Add Platform" to get started.
                     </div>
@@ -1680,7 +1698,11 @@ export default function SocialDashboard() {
                   </label>
                   <Textarea
                     id="analyticsDescription"
-                    value={currentSocial.analyticsSection?.description || ""}
+                    value={
+                      isAddingSocial
+                        ? newSocial.analyticsSection?.description || ""
+                        : editedSocial?.analyticsSection?.description || ""
+                    }
                     onChange={(e) => handleInputChange(e, "analyticsSection", "description")}
                     className="mt-1 min-h-[100px]"
                   />
@@ -1697,7 +1719,7 @@ export default function SocialDashboard() {
                     </button>
                   </div>
 
-                  {currentSocial.analyticsSection?.metrics.map((metric, index) => (
+                  {metrics.map((metric, index) => (
                     <div key={index} className="p-4 border rounded-lg space-y-3">
                       <div className="flex justify-between">
                         <h4 className="font-medium">Metric {index + 1}</h4>
@@ -1750,8 +1772,7 @@ export default function SocialDashboard() {
                     </div>
                   ))}
 
-                  {(!currentSocial.analyticsSection?.metrics ||
-                    currentSocial.analyticsSection.metrics.length === 0) && (
+                  {metrics.length === 0 && (
                     <div className="text-center py-4 text-gray-500">
                       No metrics added yet. Click "Add Metric" to get started.
                     </div>
@@ -1766,7 +1787,11 @@ export default function SocialDashboard() {
                   </label>
                   <Textarea
                     id="campaignsDescription"
-                    value={currentSocial.campaignSection?.description || ""}
+                    value={
+                      isAddingSocial
+                        ? newSocial.campaignSection?.description || ""
+                        : editedSocial?.campaignSection?.description || ""
+                    }
                     onChange={(e) => handleInputChange(e, "campaignSection", "description")}
                     className="mt-1 min-h-[100px]"
                   />
@@ -1783,7 +1808,7 @@ export default function SocialDashboard() {
                     </button>
                   </div>
 
-                  {currentSocial.campaignSection?.campaigns.map((campaign, index) => (
+                  {campaigns.map((campaign, index) => (
                     <div key={index} className="p-4 border rounded-lg space-y-3">
                       <div className="flex justify-between">
                         <h4 className="font-medium">Campaign {index + 1}</h4>
@@ -1874,12 +1899,12 @@ export default function SocialDashboard() {
                           </div>
 
                           {/* Display existing campaign images */}
-                          {fileState.existingCampaignUrls &&
-                            fileState.existingCampaignUrls.some((item) => item.campaignIndex === index) && (
+                          {existingCampaignUrls &&
+                            existingCampaignUrls.some((item) => item.campaignIndex === index) && (
                               <div className="mt-4">
                                 <h5 className="font-medium mb-2">Existing Images</h5>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                  {fileState.existingCampaignUrls
+                                  {existingCampaignUrls
                                     .find((item) => item.campaignIndex === index)
                                     ?.urls.map((url, imgIndex) => (
                                       <div key={imgIndex} className="relative">
@@ -1903,37 +1928,35 @@ export default function SocialDashboard() {
                             )}
 
                           {/* Display newly added campaign images */}
-                          {fileState.campaignFiles &&
-                            fileState.campaignFiles.some((item) => item.campaignIndex === index) && (
-                              <div className="mt-4">
-                                <h5 className="font-medium mb-2">New Images</h5>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                  {fileState.campaignFiles
-                                    .find((item) => item.campaignIndex === index)
-                                    ?.files.map((file, fileIndex) => (
-                                      <div key={fileIndex} className="relative p-2 border rounded-md">
-                                        <div className="flex items-center">
-                                          <File className="h-8 w-8 mr-2" />
-                                          <span className="text-xs truncate">{file.name}</span>
-                                          <button
-                                            onClick={() => removeFile("campaignSection", fileIndex, index)}
-                                            className="ml-auto text-red-500"
-                                          >
-                                            <X className="h-3 w-3" />
-                                          </button>
-                                        </div>
+                          {campaignFiles && campaignFiles.some((item) => item.campaignIndex === index) && (
+                            <div className="mt-4">
+                              <h5 className="font-medium mb-2">New Images</h5>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                {campaignFiles
+                                  .find((item) => item.campaignIndex === index)
+                                  ?.files.map((file, fileIndex) => (
+                                    <div key={fileIndex} className="relative p-2 border rounded-md">
+                                      <div className="flex items-center">
+                                        <File className="h-8 w-8 mr-2" />
+                                        <span className="text-xs truncate">{file.name}</span>
+                                        <button
+                                          onClick={() => removeFile("campaignSection", fileIndex, index)}
+                                          className="ml-auto text-red-500"
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </button>
                                       </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                  ))}
                               </div>
-                            )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
                   ))}
 
-                  {(!currentSocial.campaignSection?.campaigns ||
-                    currentSocial.campaignSection.campaigns.length === 0) && (
+                  {campaigns.length === 0 && (
                     <div className="text-center py-4 text-gray-500">
                       No campaigns added yet. Click "Add Campaign" to get started.
                     </div>
@@ -1982,3 +2005,4 @@ export default function SocialDashboard() {
     </div>
   )
 }
+
